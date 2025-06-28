@@ -6,12 +6,12 @@
     // Get DOM elements
     const formTitle = document.getElementById('formTitle');
     const eventForm = document.getElementById('eventForm');
-    const eventIDInput = document.getElementById('eventID');
-    const eventTypeInput = document.getElementById('eventType');
-    const eventDateInput = document.getElementById('eventDate');
-    const personIDInput = document.getElementById('personID');
-    const locationInput = document.getElementById('location');
-    const descriptionInput = document.getElementById('description');
+    const personInput = document.getElementById('person');
+    const eventInput = document.getElementById('event');
+    const beginDateInput = document.getElementById('beginDate');
+    const endDateInput = document.getElementById('endDate');
+    const notesInput = document.getElementById('notes');
+    const levelInput = document.getElementById('level');
     const saveButton = document.getElementById('saveButton');
     const cancelButton = document.getElementById('cancelButton');
     const deleteButton = document.getElementById('deleteButton');
@@ -52,6 +52,38 @@
     }
 
     /**
+     * Formats a date for display (handles both Date objects and date strings).
+     * @param {Date|string} date - The date to format.
+     * @returns {string} Formatted date string or empty string if invalid.
+     */
+    function formatDateForDisplay(date) {
+        if (!date) return '';
+        try {
+            const dateObj = new Date(date);
+            if (isNaN(dateObj.getTime())) return '';
+            return dateObj.toLocaleDateString();
+        } catch (e) {
+            return '';
+        }
+    }
+
+    /**
+     * Formats a date for input fields (YYYY-MM-DD format).
+     * @param {Date|string} date - The date to format.
+     * @returns {string} Formatted date string or empty string if invalid.
+     */
+    function formatDateForInput(date) {
+        if (!date) return '';
+        try {
+            const dateObj = new Date(date);
+            if (isNaN(dateObj.getTime())) return '';
+            return dateObj.toISOString().split('T')[0];
+        } catch (e) {
+            return '';
+        }
+    }
+
+    /**
      * Renders the data table with records.
      * @param {Array<Object>} records - An array of record objects.
      */
@@ -67,19 +99,19 @@
 
         records.forEach(record => {
             const row = eventTableBody.insertRow();
-            row.dataset.id = record.eventID; // Store eventID in data attribute for easy lookup
+            row.dataset.id = record.person + '_' + record.event + '_' + record.begin; // Create unique ID
 
-            // Create cells for each relevant field. Order matters for display.
-            row.insertCell().textContent = record.eventID || '';
-            row.insertCell().textContent = record.eventType || '';
-            row.insertCell().textContent = record.eventDate || '';
-            row.insertCell().textContent = record.personID || '';
-            row.insertCell().textContent = record.location || '';
-            row.insertCell().textContent = record.description || '';
+            // Create cells for each field. Order matters for display.
+            row.insertCell().textContent = record.person || '';
+            row.insertCell().textContent = record.event || '';
+            row.insertCell().textContent = formatDateForDisplay(record.begin) || '';
+            row.insertCell().textContent = formatDateForDisplay(record.end) || '';
+            row.insertCell().textContent = record.notes || '';
+            row.insertCell().textContent = record.level || '';
 
             // Add click listener to select row for editing/deleting
             row.addEventListener('click', () => {
-                selectRow(record.eventID);
+                selectRow(record.person + '_' + record.event + '_' + record.begin);
             });
         });
         hideLoading();
@@ -87,35 +119,34 @@
 
     /**
      * Selects a row in the table, populating the form for editing.
-     * @param {string} eventId - The eventID of the record to select.
+     * @param {string} rowId - The unique ID of the record to select.
      */
-    function selectRow(eventId) {
+    function selectRow(rowId) {
         // Remove selection from previously selected row
         const currentlySelectedRow = document.querySelector('.data-table tr.selected-row');
         if (currentlySelectedRow) {
             currentlySelectedRow.classList.remove('selected-row');
         }
 
-        const rowToSelect = document.querySelector(`.data-table tr[data-id="${eventId}"]`);
+        const rowToSelect = document.querySelector(`.data-table tr[data-id="${rowId}"]`);
         if (rowToSelect) {
             rowToSelect.classList.add('selected-row');
         }
 
-        selectedRowId = eventId;
-        const record = currentRecords.find(r => r.eventID === eventId);
+        selectedRowId = rowId;
+        const record = currentRecords.find(r => (r.person + '_' + r.event + '_' + r.begin) === rowId);
 
         if (record) {
-            formTitle.textContent = 'Edit Event';
-            eventIDInput.value = record.eventID;
-            eventTypeInput.value = record.eventType || '';
-            eventDateInput.value = record.eventDate || '';
-            personIDInput.value = record.personID || '';
-            locationInput.value = record.location || '';
-            descriptionInput.value = record.description || '';
+            formTitle.textContent = 'Edit Timeline Event';
+            personInput.value = record.person || '';
+            eventInput.value = record.event || '';
+            beginDateInput.value = formatDateForInput(record.begin) || '';
+            endDateInput.value = formatDateForInput(record.end) || '';
+            notesInput.value = record.notes || '';
+            levelInput.value = record.level || '';
 
             saveButton.textContent = 'Update Event';
             deleteButton.style.display = 'inline-block'; // Show delete button
-            eventIDInput.readOnly = true; // eventID should not be editable for existing records
         }
     }
 
@@ -124,9 +155,7 @@
      */
     function resetForm() {
         eventForm.reset();
-        formTitle.textContent = 'Add New Event';
-        eventIDInput.value = '';
-        eventIDInput.readOnly = false; // Make eventID editable for new records
+        formTitle.textContent = 'Add New Timeline Event';
         saveButton.textContent = 'Add Event';
         deleteButton.style.display = 'none'; // Hide delete button
         selectedRowId = null;
@@ -155,6 +184,49 @@
     }
 
     /**
+     * Validates the form data before submission.
+     * @param {Object} record - The record object to validate.
+     * @returns {boolean} True if valid, false otherwise.
+     */
+    function validateRecord(record) {
+        if (!record.person || !record.event || !record.begin) {
+            showMessage('Please fill in all required fields (Person, Event, Begin Date).', 'error');
+            return false;
+        }
+
+        // Validate begin date
+        const beginDate = new Date(record.begin);
+        if (isNaN(beginDate.getTime())) {
+            showMessage('Please enter a valid Begin Date.', 'error');
+            return false;
+        }
+
+        // Validate end date if provided
+        if (record.end) {
+            const endDate = new Date(record.end);
+            if (isNaN(endDate.getTime())) {
+                showMessage('Please enter a valid End Date.', 'error');
+                return false;
+            }
+            if (endDate < beginDate) {
+                showMessage('End Date cannot be earlier than Begin Date.', 'error');
+                return false;
+            }
+        }
+
+        // Validate level if provided
+        if (record.level) {
+            const level = parseInt(record.level);
+            if (isNaN(level) || level < 0) {
+                showMessage('Level must be a positive number.', 'error');
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Handles form submission for adding or updating records.
      */
     eventForm.addEventListener('submit', function(e) {
@@ -162,16 +234,15 @@
         showLoading('Saving data...');
 
         const record = {
-            eventID: eventIDInput.value.trim(),
-            eventType: eventTypeInput.value.trim(),
-            eventDate: eventDateInput.value.trim(),
-            personID: personIDInput.value.trim(),
-            location: locationInput.value.trim(),
-            description: descriptionInput.value.trim()
+            person: personInput.value.trim(),
+            event: eventInput.value.trim(),
+            begin: beginDateInput.value.trim(),
+            end: endDateInput.value.trim(),
+            notes: notesInput.value.trim(),
+            level: levelInput.value.trim()
         };
 
-        if (!record.eventID || !record.eventType || !record.eventDate || !record.personID) {
-            showMessage('Please fill in all required fields (Event ID, Event Type, Event Date, Person ID).', 'error');
+        if (!validateRecord(record)) {
             return;
         }
 
@@ -185,7 +256,7 @@
                 .withFailureHandler(error => {
                     showMessage('Error updating record: ' + error.message, 'error');
                 })
-                .updateRow(record); // Pass the entire record for update
+                .updateRow(record);
         } else { // Add new record
             google.script.run
                 .withSuccessHandler(() => {
@@ -204,7 +275,7 @@
      * Handles deletion of a record.
      */
     deleteButton.addEventListener('click', () => {
-        if (selectedRowId && confirm('Are you sure you want to delete this event?')) {
+        if (selectedRowId && confirm('Are you sure you want to delete this timeline event?')) {
             showLoading('Deleting record...');
             google.script.run
                 .withSuccessHandler(() => {
@@ -225,7 +296,6 @@
     cancelButton.addEventListener('click', () => {
         resetForm();
     });
-
 
     // Initial data load when the page loads
     document.addEventListener('DOMContentLoaded', fetchRecords);

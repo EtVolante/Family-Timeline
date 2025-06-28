@@ -14,39 +14,43 @@
     <div class="container">
         <h1>Family Timeline Data Management</h1>
         <p>Manage your family timeline events (Add, View, Update, Delete).</p>
+        <p class="version-info">Version: 2.0.0 - Updated data structure with Person, Event, Begin/End dates, Notes, and Level fields</p>
 
         <!-- Form for Add/Update -->
         <div class="section">
-            <h3 id="formTitle">Add New Event</h3>
+            <h3 id="formTitle">Add New Timeline Event</h3>
             <form id="eventForm">
-                <input type="hidden" id="eventID" value=""> <!-- Hidden field for EventID for updates -->
-
                 <div class="row">
                     <div class="column">
-                        <label for="eventType">Event Type:</label>
-                        <input type="text" id="eventType" placeholder="e.g., Birth, Marriage, Occupation" required>
+                        <label for="person">Person:</label>
+                        <input type="text" id="person" placeholder="e.g., John Smith" required>
                     </div>
                     <div class="column">
-                        <label for="eventDate">Event Date:</label>
-                        <input type="date" id="eventDate" required>
+                        <label for="event">Event:</label>
+                        <input type="text" id="event" placeholder="e.g., Birth, Marriage, Graduation" required>
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="column">
-                        <label for="personID">Person ID:</label>
-                        <input type="text" id="personID" placeholder="e.g., P001" required>
+                        <label for="beginDate">Begin Date:</label>
+                        <input type="date" id="beginDate" required>
                     </div>
-                     <div class="column">
-                        <label for="location">Location:</label>
-                        <input type="text" id="location" placeholder="e.g., London">
+                    <div class="column">
+                        <label for="endDate">End Date:</label>
+                        <input type="date" id="endDate" placeholder="Optional">
                     </div>
                 </div>
 
                 <div class="row">
                     <div class="column">
-                        <label for="description">Description:</label>
-                        <textarea id="description" placeholder="A brief description of the event."></textarea>
+                        <label for="notes">Notes:</label>
+                        <textarea id="notes" placeholder="Additional details about the event."></textarea>
+                    </div>
+                    <div class="column">
+                        <label for="level">Level:</label>
+                        <input type="number" id="level" placeholder="e.g., 1, 2, 3" min="0">
+                        <small>Importance level (0 = lowest, higher numbers = more important)</small>
                     </div>
                 </div>
 
@@ -60,19 +64,19 @@
 
         <!-- Data Table -->
         <div class="section">
-            <h3>All Events</h3>
+            <h3>All Timeline Events</h3>
             <div id="loadingIndicator" class="loading-indicator">Loading data...</div>
             <div id="messageBox" class="message-box"></div>
             <div class="data-table-container">
                 <table class="data-table" id="eventTable">
                     <thead>
                         <tr>
-                            <th>Event ID</th>
-                            <th>Event Type</th>
-                            <th>Event Date</th>
-                            <th>Person ID</th>
-                            <th>Location</th>
-                            <th>Description</th>
+                            <th>Person</th>
+                            <th>Event</th>
+                            <th>Begin Date</th>
+                            <th>End Date</th>
+                            <th>Notes</th>
+                            <th>Level</th>
                         </tr>
                     </thead>
                     <tbody>
