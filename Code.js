@@ -14,6 +14,12 @@ function doGet() {
     .setTitle('Family Timeline Information');
 }
 
+// Function to include html files in main page
+function include(filename) {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+
 /**
  * Gets all data from the 'Data' sheet.
  * Assumes the first row contains headers.
