@@ -1,0 +1,233 @@
+<script>
+    // Use google.script.run for communicating with Apps Script backend
+    let currentRecords = [];
+    let selectedRowId = null; // To keep track of the row being edited/deleted
+
+    // Get DOM elements
+    const formTitle = document.getElementById('formTitle');
+    const eventForm = document.getElementById('eventForm');
+    const eventIDInput = document.getElementById('eventID');
+    const eventTypeInput = document.getElementById('eventType');
+    const eventDateInput = document.getElementById('eventDate');
+    const personIDInput = document.getElementById('personID');
+    const locationInput = document.getElementById('location');
+    const descriptionInput = document.getElementById('description');
+    const saveButton = document.getElementById('saveButton');
+    const cancelButton = document.getElementById('cancelButton');
+    const deleteButton = document.getElementById('deleteButton');
+    const eventTableBody = document.querySelector('#eventTable tbody');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const messageBox = document.getElementById('messageBox');
+    const noRecordsMessage = document.getElementById('noRecords');
+
+    /**
+     * Displays a loading indicator.
+     */
+    function showLoading(message = 'Loading data...') {
+        loadingIndicator.textContent = message;
+        loadingIndicator.style.display = 'block';
+        messageBox.style.display = 'none'; // Hide any previous messages
+    }
+
+    /**
+     * Hides the loading indicator.
+     */
+    function hideLoading() {
+        loadingIndicator.style.display = 'none';
+    }
+
+    /**
+     * Displays a message (success or error).
+     * @param {string} message - The message to display.
+     * @param {string} type - 'success' or 'error'.
+     */
+    function showMessage(message, type) {
+        messageBox.textContent = message;
+        messageBox.className = 'message-box ' + type;
+        messageBox.style.display = 'block';
+        hideLoading();
+        setTimeout(() => {
+            messageBox.style.display = 'none';
+        }, 5000); // Hide after 5 seconds
+    }
+
+    /**
+     * Renders the data table with records.
+     * @param {Array<Object>} records - An array of record objects.
+     */
+    function renderTable(records) {
+        eventTableBody.innerHTML = ''; // Clear existing rows
+        currentRecords = records; // Store records globally for easy access
+
+        if (records.length === 0) {
+            noRecordsMessage.style.display = 'block';
+            return;
+        }
+        noRecordsMessage.style.display = 'none';
+
+        records.forEach(record => {
+            const row = eventTableBody.insertRow();
+            row.dataset.id = record.eventID; // Store eventID in data attribute for easy lookup
+
+            // Create cells for each relevant field. Order matters for display.
+            row.insertCell().textContent = record.eventID || '';
+            row.insertCell().textContent = record.eventType || '';
+            row.insertCell().textContent = record.eventDate || '';
+            row.insertCell().textContent = record.personID || '';
+            row.insertCell().textContent = record.location || '';
+            row.insertCell().textContent = record.description || '';
+
+            // Add click listener to select row for editing/deleting
+            row.addEventListener('click', () => {
+                selectRow(record.eventID);
+            });
+        });
+        hideLoading();
+    }
+
+    /**
+     * Selects a row in the table, populating the form for editing.
+     * @param {string} eventId - The eventID of the record to select.
+     */
+    function selectRow(eventId) {
+        // Remove selection from previously selected row
+        const currentlySelectedRow = document.querySelector('.data-table tr.selected-row');
+        if (currentlySelectedRow) {
+            currentlySelectedRow.classList.remove('selected-row');
+        }
+
+        const rowToSelect = document.querySelector(`.data-table tr[data-id="${eventId}"]`);
+        if (rowToSelect) {
+            rowToSelect.classList.add('selected-row');
+        }
+
+        selectedRowId = eventId;
+        const record = currentRecords.find(r => r.eventID === eventId);
+
+        if (record) {
+            formTitle.textContent = 'Edit Event';
+            eventIDInput.value = record.eventID;
+            eventTypeInput.value = record.eventType || '';
+            eventDateInput.value = record.eventDate || '';
+            personIDInput.value = record.personID || '';
+            locationInput.value = record.location || '';
+            descriptionInput.value = record.description || '';
+
+            saveButton.textContent = 'Update Event';
+            deleteButton.style.display = 'inline-block'; // Show delete button
+            eventIDInput.readOnly = true; // eventID should not be editable for existing records
+        }
+    }
+
+    /**
+     * Clears the form and resets it for adding a new event.
+     */
+    function resetForm() {
+        eventForm.reset();
+        formTitle.textContent = 'Add New Event';
+        eventIDInput.value = '';
+        eventIDInput.readOnly = false; // Make eventID editable for new records
+        saveButton.textContent = 'Add Event';
+        deleteButton.style.display = 'none'; // Hide delete button
+        selectedRowId = null;
+
+        // Remove selection from table
+        const currentlySelectedRow = document.querySelector('.data-table tr.selected-row');
+        if (currentlySelectedRow) {
+            currentlySelectedRow.classList.remove('selected-row');
+        }
+    }
+
+    /**
+     * Fetches all records from the Google Sheet.
+     */
+    function fetchRecords() {
+        showLoading();
+        google.script.run
+            .withSuccessHandler(records => {
+                renderTable(records);
+                hideLoading();
+            })
+            .withFailureHandler(error => {
+                showMessage('Error fetching data: ' + error.message, 'error');
+            })
+            .getData();
+    }
+
+    /**
+     * Handles form submission for adding or updating records.
+     */
+    eventForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        showLoading('Saving data...');
+
+        const record = {
+            eventID: eventIDInput.value.trim(),
+            eventType: eventTypeInput.value.trim(),
+            eventDate: eventDateInput.value.trim(),
+            personID: personIDInput.value.trim(),
+            location: locationInput.value.trim(),
+            description: descriptionInput.value.trim()
+        };
+
+        if (!record.eventID || !record.eventType || !record.eventDate || !record.personID) {
+            showMessage('Please fill in all required fields (Event ID, Event Type, Event Date, Person ID).', 'error');
+            return;
+        }
+
+        if (selectedRowId) { // Update existing record
+            google.script.run
+                .withSuccessHandler(() => {
+                    showMessage('Record updated successfully!', 'success');
+                    resetForm();
+                    fetchRecords(); // Refresh table
+                })
+                .withFailureHandler(error => {
+                    showMessage('Error updating record: ' + error.message, 'error');
+                })
+                .updateRow(record); // Pass the entire record for update
+        } else { // Add new record
+            google.script.run
+                .withSuccessHandler(() => {
+                    showMessage('Record added successfully!', 'success');
+                    resetForm();
+                    fetchRecords(); // Refresh table
+                })
+                .withFailureHandler(error => {
+                    showMessage('Error adding record: ' + error.message, 'error');
+                })
+                .addRow(record);
+        }
+    });
+
+    /**
+     * Handles deletion of a record.
+     */
+    deleteButton.addEventListener('click', () => {
+        if (selectedRowId && confirm('Are you sure you want to delete this event?')) {
+            showLoading('Deleting record...');
+            google.script.run
+                .withSuccessHandler(() => {
+                    showMessage('Record deleted successfully!', 'success');
+                    resetForm();
+                    fetchRecords(); // Refresh table
+                })
+                .withFailureHandler(error => {
+                    showMessage('Error deleting record: ' + error.message, 'error');
+                })
+                .deleteRow(selectedRowId);
+        }
+    });
+
+    /**
+     * Handles canceling an edit/add operation.
+     */
+    cancelButton.addEventListener('click', () => {
+        resetForm();
+    });
+
+
+    // Initial data load when the page loads
+    document.addEventListener('DOMContentLoaded', fetchRecords);
+
+</script>

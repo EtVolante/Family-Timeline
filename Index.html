@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Family Timeline Data Management</title>
+    <!-- Milligram CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.min.css">
+    <!-- Custom Stylesheet -->
+    <?!= include('Stylesheet.html'); ?> 
+</head>
+<body>
+    <div class="container">
+        <h1>Family Timeline Data Management</h1>
+        <p>Manage your family timeline events (Add, View, Update, Delete).</p>
+
+        <!-- Form for Add/Update -->
+        <div class="section">
+            <h3 id="formTitle">Add New Event</h3>
+            <form id="eventForm">
+                <input type="hidden" id="eventID" value=""> <!-- Hidden field for EventID for updates -->
+
+                <div class="row">
+                    <div class="column">
+                        <label for="eventType">Event Type:</label>
+                        <input type="text" id="eventType" placeholder="e.g., Birth, Marriage, Occupation" required>
+                    </div>
+                    <div class="column">
+                        <label for="eventDate">Event Date:</label>
+                        <input type="date" id="eventDate" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="column">
+                        <label for="personID">Person ID:</label>
+                        <input type="text" id="personID" placeholder="e.g., P001" required>
+                    </div>
+                     <div class="column">
+                        <label for="location">Location:</label>
+                        <input type="text" id="location" placeholder="e.g., London">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="column">
+                        <label for="description">Description:</label>
+                        <textarea id="description" placeholder="A brief description of the event."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" id="saveButton">Add Event</button>
+                    <button type="button" id="cancelButton" class="button-outline">Cancel</button>
+                    <button type="button" id="deleteButton" class="delete-btn" style="display:none;">Delete Event</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Data Table -->
+        <div class="section">
+            <h3>All Events</h3>
+            <div id="loadingIndicator" class="loading-indicator">Loading data...</div>
+            <div id="messageBox" class="message-box"></div>
+            <div class="data-table-container">
+                <table class="data-table" id="eventTable">
+                    <thead>
+                        <tr>
+                            <th>Event ID</th>
+                            <th>Event Type</th>
+                            <th>Event Date</th>
+                            <th>Person ID</th>
+                            <th>Location</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <p id="noRecords" class="no-records" style="display:none;">No records found.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <?!= include('Javascript.html'); ?>
+</body>
+</html>
