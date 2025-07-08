@@ -14,23 +14,27 @@
     <div class="container">
         <h1>Family Timeline Data Management</h1>
         <p>Manage your family timeline events (Add, View, Update, Delete).</p>
-        <p class="version-info">Version: 2.1.0 - Updated data structure with Person, Event, Begin/End dates, Notes, and Level fields</p>
+        <p class="version-info">Version: 2.2.0 - Form moved to bottom, Level column hidden, improved level filter with dropdowns</p>
 
         <!-- Data Table -->
         <div class="section">
             <h3>All Timeline Events</h3>
-            <!-- Level Filter UI -->
-            <div class="row" id="levelFilterRow">
-                <div class="column">
+            <!-- Level and Date Filter UI -->
+            <div class="row" id="levelFilterRow" style="display: flex; align-items: flex-end; gap: 1em; justify-content: flex-start; max-width: 600px; margin-bottom: 1em;">
+                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 100px;">
                     <label for="minLevel">Min Level:</label>
-                    <input type="number" id="minLevel" placeholder="Min" min="0">
+                    <select id="minLevel" style="width: 100px;"></select>
                 </div>
-                <div class="column">
+                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 100px;">
                     <label for="maxLevel">Max Level:</label>
-                    <input type="number" id="maxLevel" placeholder="Max" min="0">
+                    <select id="maxLevel" style="width: 100px;"></select>
                 </div>
-                <div class="column">
-                    <button type="button" id="applyLevelFilter">Filter</button>
+                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 140px;">
+                    <label for="filterDate">Filter Date:</label>
+                    <input type="date" id="filterDate" style="width: 140px;">
+                </div>
+                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 80px; padding-top: 18px;">
+                    <button type="button" id="applyLevelFilter" style="width: 80px;">Filter</button>
                 </div>
             </div>
             <div id="loadingIndicator" class="loading-indicator">Loading data...</div>

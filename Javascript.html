@@ -124,22 +124,36 @@
         $eventTableBody.empty(); // Clear existing rows
         currentRecords = records; // Store records globally for easy access
 
-        // Determine min/max level in the dataset
-        let minLevel = null, maxLevel = null;
+        // Gather all unique level values, sorted numerically
+        const levelSet = new Set();
         records.forEach(record => {
             const level = parseInt(record.level);
-            if (!isNaN(level)) {
-                if (minLevel === null || level < minLevel) minLevel = level;
-                if (maxLevel === null || level > maxLevel) maxLevel = level;
-            }
+            if (!isNaN(level)) levelSet.add(level);
+        });
+        const levelList = Array.from(levelSet).sort((a, b) => a - b);
+
+        // Populate the min/max level dropdowns
+        const $minLevel = $('#minLevel');
+        const $maxLevel = $('#maxLevel');
+        $minLevel.empty();
+        $maxLevel.empty();
+        levelList.forEach(level => {
+            $minLevel.append($('<option>').val(level).text(level));
+            $maxLevel.append($('<option>').val(level).text(level));
         });
         // Set default filter values if not set
-        if ($('#minLevel').val() === '' && minLevel !== null) $('#minLevel').val(minLevel);
-        if ($('#maxLevel').val() === '' && maxLevel !== null) $('#maxLevel').val(maxLevel);
+        if ($minLevel.val() === null && levelList.length > 0) $minLevel.val(levelList[0]);
+        if ($maxLevel.val() === null && levelList.length > 0) $maxLevel.val(levelList[levelList.length - 1]);
 
         // Get filter values
-        const filterMin = parseInt($('#minLevel').val());
-        const filterMax = parseInt($('#maxLevel').val());
+        const filterMin = parseInt($minLevel.val());
+        const filterMax = parseInt($maxLevel.val());
+        const filterDateStr = $('#filterDate').val();
+        let filterDate = null;
+        if (filterDateStr) {
+            filterDate = new Date(filterDateStr);
+            if (isNaN(filterDate.getTime())) filterDate = null;
+        }
         let filteredRecords = records;
         if (!isNaN(filterMin) && !isNaN(filterMax)) {
             filteredRecords = records.filter(record => {
@@ -147,6 +161,27 @@
                 if (isNaN(level)) return false;
                 return level >= filterMin && level <= filterMax;
             });
+        }
+        // Apply date filter if set
+        if (filterDate) {
+            filteredRecords = filteredRecords.filter(record => {
+                const begin = new Date(record.begin);
+                const end = record.end ? new Date(record.end) : null;
+                if (isNaN(begin.getTime())) return false;
+                if (end && !isNaN(end.getTime())) {
+                    return filterDate >= begin && filterDate <= end;
+                } else {
+                    return filterDate >= begin;
+                }
+            });
+        }
+
+        // Update table header for 'Since' column
+        const $theadRow = $('#eventTable thead tr');
+        $theadRow.empty();
+        $theadRow.append('<th>Person</th><th>Event</th><th>Begin Date</th><th>End Date</th><th>Notes</th>');
+        if (filterDate) {
+            $theadRow.append('<th>Since</th>');
         }
 
         if (filteredRecords.length === 0) {
@@ -166,6 +201,18 @@
                 $('<td>').text(formatDateForDisplay(record.end) || ''),
                 $('<td>').text(record.notes || '')
             );
+            // Add 'Since' column if filterDate is set
+            if (filterDate) {
+                const begin = new Date(record.begin);
+                let sinceText = '';
+                if (!isNaN(begin.getTime())) {
+                    const diff = diffYearsMonths(begin, filterDate);
+                    if (diff) {
+                        sinceText = diff;
+                    }
+                }
+                $row.append($('<td>').text(sinceText));
+            }
             // Add click listener to select row for editing/deleting
             $row.on('click', function() {
                 selectRow(rowId);
@@ -173,6 +220,28 @@
             $eventTableBody.append($row);
         });
         hideLoading();
+    }
+
+    // Helper to calculate difference in years and months
+    function diffYearsMonths(start, end) {
+        if (!(start instanceof Date) || !(end instanceof Date)) return '';
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return '';
+        let years = end.getFullYear() - start.getFullYear();
+        let months = end.getMonth() - start.getMonth();
+        let days = end.getDate() - start.getDate();
+        if (days < 0) {
+            months--;
+        }
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+        if (years < 0) return '';
+        let result = '';
+        if (years > 0) result += years + 'y';
+        if (months > 0) result += (result ? ' ' : '') + months + 'm';
+        if (!result) result = '0m';
+        return result;
     }
 
     /**
@@ -388,8 +457,8 @@
         renderTable(currentRecords);
     });
 
-    // Optionally, update table on filter input change
-    $(document).on('change', '#minLevel, #maxLevel', function() {
+    // Optionally, update table on filter select or date change
+    $(document).on('change', '#minLevel, #maxLevel, #filterDate', function() {
         renderTable(currentRecords);
     });
 
