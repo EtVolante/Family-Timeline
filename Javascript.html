@@ -132,18 +132,28 @@
         });
         const levelList = Array.from(levelSet).sort((a, b) => a - b);
 
-        // Populate the min/max level dropdowns
+        // Preserve current selections
         const $minLevel = $('#minLevel');
         const $maxLevel = $('#maxLevel');
+        const prevMin = $minLevel.val();
+        const prevMax = $maxLevel.val();
         $minLevel.empty();
         $maxLevel.empty();
         levelList.forEach(level => {
             $minLevel.append($('<option>').val(level).text(level));
             $maxLevel.append($('<option>').val(level).text(level));
         });
-        // Set default filter values if not set
-        if ($minLevel.val() === null && levelList.length > 0) $minLevel.val(levelList[0]);
-        if ($maxLevel.val() === null && levelList.length > 0) $maxLevel.val(levelList[levelList.length - 1]);
+        // Restore previous selection if possible, otherwise use min/max
+        if (prevMin && levelList.includes(Number(prevMin))) {
+            $minLevel.val(prevMin);
+        } else if (levelList.length > 0) {
+            $minLevel.val(levelList[0]);
+        }
+        if (prevMax && levelList.includes(Number(prevMax))) {
+            $maxLevel.val(prevMax);
+        } else if (levelList.length > 0) {
+            $maxLevel.val(levelList[levelList.length - 1]);
+        }
 
         // Get filter values
         const filterMin = parseInt($minLevel.val());
@@ -154,9 +164,10 @@
             filterDate = new Date(filterDateStr);
             if (isNaN(filterDate.getTime())) filterDate = null;
         }
-        let filteredRecords = records;
+        // Defensive copy to avoid mutating original records
+        let filteredRecords = records.map(r => ({...r}));
         if (!isNaN(filterMin) && !isNaN(filterMax)) {
-            filteredRecords = records.filter(record => {
+            filteredRecords = filteredRecords.filter(record => {
                 const level = parseInt(record.level);
                 if (isNaN(level)) return false;
                 return level >= filterMin && level <= filterMax;
@@ -176,6 +187,19 @@
             });
         }
 
+        // Sort filteredRecords based on sortBy dropdown
+        const sortBy = $('#sortBy').val() || 'person';
+        filteredRecords.sort((a, b) => {
+            if (sortBy === 'person') {
+                return (a.person || '').localeCompare(b.person || '');
+            } else if (sortBy === 'begin') {
+                const aDate = new Date(a.begin);
+                const bDate = new Date(b.begin);
+                return aDate - bDate;
+            }
+            return 0;
+        });
+
         // Update table header for 'Since' column
         const $theadRow = $('#eventTable thead tr');
         $theadRow.empty();
@@ -193,13 +217,50 @@
         filteredRecords.forEach(record => {
             const rowId = record.person + '_' + record.event + '_' + record.begin;
             const $row = $('<tr>').attr('data-id', rowId);
+            // Highlight Age event rows
+            if (record.event === 'Age') {
+                $row.addClass('age-row');
+            }
             // Create cells for each field. Order matters for display.
+            console.log('Rendering End Date:', record.end); // Debug log
+            let notesText = record.notes || '';
+            if (record.event === 'Age') {
+                const begin = new Date(record.begin);
+                const end = record.end ? new Date(record.end) : null;
+                if (!isNaN(begin.getTime()) && end && !isNaN(end.getTime())) {
+                    const years = end.getFullYear() - begin.getFullYear();
+                    let months = end.getMonth() - begin.getMonth();
+                    let days = end.getDate() - begin.getDate();
+                    if (days < 0) {
+                        months--;
+                    }
+                    if (months < 0) {
+                        months += 12;
+                    }
+                    notesText = `${years} years and ${months} months old`;
+                }
+            } else if (record.event === 'Married') {
+                const begin = new Date(record.begin);
+                const end = record.end ? new Date(record.end) : null;
+                if (!isNaN(begin.getTime()) && end && !isNaN(end.getTime())) {
+                    const years = end.getFullYear() - begin.getFullYear();
+                    let months = end.getMonth() - begin.getMonth();
+                    let days = end.getDate() - begin.getDate();
+                    if (days < 0) {
+                        months--;
+                    }
+                    if (months < 0) {
+                        months += 12;
+                    }
+                    notesText += (notesText ? ' ' : '') + `Married ${years}y ${months}m`;
+                }
+            }
             $row.append(
                 $('<td>').text(record.person || ''),
                 $('<td>').text(record.event || ''),
                 $('<td>').text(formatDateForDisplay(record.begin) || ''),
                 $('<td>').text(formatDateForDisplay(record.end) || ''),
-                $('<td>').text(record.notes || '')
+                $('<td>').text(notesText)
             );
             // Add 'Since' column if filterDate is set
             if (filterDate) {
@@ -219,6 +280,15 @@
             });
             $eventTableBody.append($row);
         });
+
+        // Add CSS for .age-row if not present
+        if (!document.getElementById('age-row-style')) {
+            const style = document.createElement('style');
+            style.id = 'age-row-style';
+            style.innerHTML = '.age-row { background-color: #fffbe6 !important; }';
+            document.head.appendChild(style);
+        }
+
         hideLoading();
     }
 
@@ -244,30 +314,66 @@
         return result;
     }
 
+    // Helper to populate dropdowns with unique values from records
+    function populateDropdown($select, values, currentValue) {
+        $select.empty();
+        values.forEach(val => {
+            const $opt = $('<option>').val(val).text(val);
+            if (val == currentValue) $opt.prop('selected', true);
+            $select.append($opt);
+        });
+    }
+
+    // Set form fields to readonly/disabled or editable
+    function setFormReadOnly(isReadOnly) {
+        $('#person').prop('disabled', isReadOnly);
+        $('#event').prop('disabled', isReadOnly);
+        $('#beginDate').prop('readonly', isReadOnly);
+        $('#endDate').prop('readonly', isReadOnly);
+        $('#level').prop('disabled', isReadOnly);
+        $('#notes').prop('readonly', isReadOnly);
+        $('#saveButton').prop('disabled', isReadOnly);
+    }
+
+    // Populate form dropdowns with unique values from records
+    function populateFormDropdowns(records, currentRecord) {
+        // Person
+        const personSet = new Set();
+        // Event
+        const eventSet = new Set();
+        // Level
+        const levelSet = new Set();
+        records.forEach(r => {
+            if (r.person) personSet.add(r.person);
+            if (r.event) eventSet.add(r.event);
+            if (r.level) levelSet.add(r.level);
+        });
+        populateDropdown($('#person'), Array.from(personSet).sort(), currentRecord ? currentRecord.person : '');
+        populateDropdown($('#event'), Array.from(eventSet).sort(), currentRecord ? currentRecord.event : '');
+        populateDropdown($('#level'), Array.from(levelSet).sort((a,b)=>a-b), currentRecord ? currentRecord.level : '');
+    }
+
     /**
      * Selects a row in the table, populating the form for editing.
      * @param {string} rowId - The unique ID of the record to select.
      */
     function selectRow(rowId) {
-        // Remove selection from previously selected row
         $('.data-table tr.selected-row').removeClass('selected-row');
-
-        // Add selection to current row
         $(`.data-table tr[data-id="${rowId}"]`).addClass('selected-row');
-
         selectedRowId = rowId;
         const record = currentRecords.find(r => (r.person + '_' + r.event + '_' + r.begin) === rowId);
-
         if (record) {
             $formTitle.text('Edit Timeline Event');
-            $personInput.val(record.person || '');
-            $eventInput.val(record.event || '');
-            $beginDateInput.val(formatDateForInput(record.begin) || '');
-            $endDateInput.val(formatDateForInput(record.end) || '');
-            $notesInput.val(record.notes || '');
-            $levelInput.val(record.level || '');
-
-            $saveButton.text('Update Event');
+            populateFormDropdowns(currentRecords, record);
+            $('#person').val(record.person || '');
+            $('#event').val(record.event || '');
+            $('#beginDate').val(formatDateForInput(record.begin) || '');
+            $('#endDate').val(formatDateForInput(record.end) || '');
+            $('#notes').val(record.notes || '');
+            $('#level').val(record.level || '');
+            setFormReadOnly(true);
+            $('#editButton').show();
+            $('#saveButton').prop('disabled', true);
             $deleteButton.show();
         }
     }
@@ -280,14 +386,14 @@
             console.error('Form elements not found');
             return;
         }
-
         $eventForm[0].reset();
         $formTitle.text('Add New Timeline Event');
-        $saveButton.text('Add Event');
+        populateFormDropdowns(currentRecords, null);
+        setFormReadOnly(false);
+        $('#editButton').hide();
+        $('#saveButton').prop('disabled', false);
         $deleteButton.hide();
         selectedRowId = null;
-
-        // Remove selection from table
         $('.data-table tr.selected-row').removeClass('selected-row');
     }
 
@@ -356,37 +462,34 @@
     function handleFormSubmit(e) {
         e.preventDefault();
         showLoading('Saving data...');
-
         const record = {
-            person: $personInput.val().trim(),
-            event: $eventInput.val().trim(),
-            begin: $beginDateInput.val().trim(),
-            end: $endDateInput.val().trim(),
-            notes: $notesInput.val().trim(),
-            level: $levelInput.val().trim()
+            person: $('#person').val(),
+            event: $('#event').val(),
+            begin: $('#beginDate').val(),
+            end: $('#endDate').val(),
+            notes: $('#notes').val(),
+            level: $('#level').val()
         };
-
         if (!validateRecord(record)) {
             return;
         }
-
-        if (selectedRowId) { // Update existing record
+        if (selectedRowId) {
             google.script.run
                 .withSuccessHandler(() => {
                     showMessage('Record updated successfully!', 'success');
                     resetForm();
-                    fetchRecords(); // Refresh table
+                    fetchRecords();
                 })
                 .withFailureHandler(error => {
                     showMessage('Error updating record: ' + error.message, 'error');
                 })
                 .updateRow(record);
-        } else { // Add new record
+        } else {
             google.script.run
                 .withSuccessHandler(() => {
                     showMessage('Record added successfully!', 'success');
                     resetForm();
-                    fetchRecords(); // Refresh table
+                    fetchRecords();
                 })
                 .withFailureHandler(error => {
                     showMessage('Error adding record: ' + error.message, 'error');
@@ -462,12 +565,26 @@
         renderTable(currentRecords);
     });
 
+    // Edit button logic
+    $(document).on('click', '#editButton', function() {
+        setFormReadOnly(false);
+        $('#saveButton').prop('disabled', false);
+        $('#editButton').hide();
+    });
+
+    // Add event listener for the sort dropdown
+    $(document).on('change', '#sortBy', function() {
+        renderTable(currentRecords);
+    });
+
     // Initialize everything when DOM is loaded
     $(document).ready(function() {
         if (initializeDOMElements()) {
             initializeEventListeners();
             addEnhancements();
-            fetchRecords(); // Initial data load
+            fetchRecords();
+            setFormReadOnly(false);
+            $('#editButton').hide();
         } else {
             console.error('Failed to initialize DOM elements');
             showMessage('Failed to initialize the application. Please refresh the page.', 'error');
