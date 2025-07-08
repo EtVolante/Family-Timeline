@@ -16,37 +16,38 @@
         <p>Manage your family timeline events (Add, View, Update, Delete).</p>
         <p class="version-info">Version: 3.0.0 - Initial working copy populated with data</p>
 
+        <!-- Level and Date Filter UI -->
+        <div class="row" id="levelFilterRow" style="margin-bottom: 1em;">
+            <div class="column column-20">
+                <label for="minLevel">Min Level:</label>
+                <select id="minLevel"></select>
+            </div>
+            <div class="column column-20">
+                <label for="maxLevel">Max Level:</label>
+                <select id="maxLevel"></select>
+            </div>
+            <div class="column column-20">
+                <label for="filterDate">Filter Date:</label>
+                <input type="date" id="filterDate">
+            </div>
+            <div class="column column-20">
+                <label for="sortBy">Sort By:</label>
+                <select id="sortBy">
+                    <option value="person" selected>Person</option>
+                    <option value="begin">Begin Date</option>
+                </select>
+            </div>
+            <div class="column column-20" style="display: flex; align-items: flex-end;">
+                <button type="button" id="applyLevelFilter" style="width: 100%;">Filter</button>
+            </div>
+        </div>
+
         <!-- Data Table -->
         <div class="section">
             <h3>All Timeline Events</h3>
-            <!-- Level and Date Filter UI -->
-            <div class="row" id="levelFilterRow" style="display: flex; align-items: flex-end; gap: 1em; justify-content: flex-start; max-width: 700px; margin-bottom: 1em;">
-                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 100px;">
-                    <label for="minLevel">Min Level:</label>
-                    <select id="minLevel" style="width: 100px;"></select>
-                </div>
-                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 100px;">
-                    <label for="maxLevel">Max Level:</label>
-                    <select id="maxLevel" style="width: 100px;"></select>
-                </div>
-                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 140px;">
-                    <label for="filterDate">Filter Date:</label>
-                    <input type="date" id="filterDate" style="width: 140px;">
-                </div>
-                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 140px;">
-                    <label for="sortBy">Sort By:</label>
-                    <select id="sortBy" style="width: 140px;">
-                        <option value="person" selected>Person</option>
-                        <option value="begin">Begin Date</option>
-                    </select>
-                </div>
-                <div class="column" style="flex: 0 0 auto; width: auto; min-width: 80px; padding-top: 18px;">
-                    <button type="button" id="applyLevelFilter" style="width: 80px;">Filter</button>
-                </div>
-            </div>
             <div id="loadingIndicator" class="loading-indicator">Loading data...</div>
             <div id="messageBox" class="message-box"></div>
-            <div class="data-table-container">
+            <div class="data-table-container responsive-table" style="overflow-x: auto;">
                 <table class="data-table" id="eventTable">
                     <thead>
                         <tr>
@@ -68,39 +69,65 @@
         <!-- Form for Add/Update -->
         <div class="section">
             <h3 id="formTitle">Add New Timeline Event</h3>
-            <form id="eventForm" style="display: flex; flex-wrap: wrap; gap: 1em; align-items: flex-end;">
-                <div class="column" style="flex: 1 1 120px; min-width: 120px;">
-                    <label for="person">Person:</label>
-                    <select id="person" required readonly></select>
+            <form id="eventForm">
+                <div class="row">
+                    <div class="column column-20">
+                        <label for="person">Person:</label>
+                        <select id="person" required readonly></select>
+                    </div>
+                    <div class="column column-20">
+                        <label for="event">Event:</label>
+                        <select id="event" required readonly></select>
+                    </div>
+                    <div class="column column-20">
+                        <label for="beginDate">Begin Date:</label>
+                        <input type="date" id="beginDate" required readonly>
+                    </div>
+                    <div class="column column-20">
+                        <label for="endDate">End Date:</label>
+                        <input type="date" id="endDate" placeholder="Optional" readonly>
+                    </div>
+                    <div class="column column-20">
+                        <label for="level">Level:</label>
+                        <select id="level" readonly></select>
+                    </div>
                 </div>
-                <div class="column" style="flex: 1 1 120px; min-width: 120px;">
-                    <label for="event">Event:</label>
-                    <select id="event" required readonly></select>
+                <div class="row">
+                    <div class="column column-80">
+                        <label for="notes">Notes:</label>
+                        <textarea id="notes" placeholder="Additional details about the event." readonly style="resize: vertical; width: 100%;"></textarea>
+                    </div>
                 </div>
-                <div class="column" style="flex: 1 1 120px; min-width: 120px;">
-                    <label for="beginDate">Begin Date:</label>
-                    <input type="date" id="beginDate" required readonly>
-                </div>
-                <div class="column" style="flex: 1 1 120px; min-width: 120px;">
-                    <label for="endDate">End Date:</label>
-                    <input type="date" id="endDate" placeholder="Optional" readonly>
-                </div>
-                <div class="column" style="flex: 1 1 120px; min-width: 120px;">
-                    <label for="level">Level:</label>
-                    <select id="level" readonly></select>
-                </div>
-                <div class="column" style="flex: 2 1 200px; min-width: 200px;">
-                    <label for="notes">Notes:</label>
-                    <textarea id="notes" placeholder="Additional details about the event." readonly style="resize: vertical;"></textarea>
-                </div>
-                <div class="form-actions" style="flex-basis: 100%; display: flex; justify-content: flex-start; gap: 1em; margin-top: 1em;">
-                    <button type="button" id="editButton">Edit</button>
-                    <button type="submit" id="saveButton" disabled>Save</button>
-                    <button type="button" id="deleteButton" class="delete-btn" style="display:none;">Delete</button>
-                    <button type="button" id="cancelButton" class="button-outline">Cancel</button>
+                <div class="row">
+                    <div class="column" style="display: flex; justify-content: flex-start; gap: 1em;">
+                        <button type="button" id="editButton">Edit</button>
+                        <button type="submit" id="saveButton" disabled>Save</button>
+                        <button type="button" id="deleteButton" class="delete-btn" style="display:none;">Delete</button>
+                        <button type="button" id="cancelButton" class="button-outline">Cancel</button>
+                    </div>
                 </div>
             </form>
         </div>
+
+        <style>
+        /* Responsive tweaks for mobile */
+        @media (max-width: 600px) {
+            #levelFilterRow .column,
+            #eventForm .column {
+                flex: 1 1 100%;
+                max-width: 100%;
+            }
+            .responsive-table {
+                overflow-x: auto;
+            }
+            .data-table th, .data-table td {
+                white-space: nowrap;
+            }
+            #eventForm textarea {
+                min-width: 0;
+            }
+        }
+        </style>
 
     </div>
 
