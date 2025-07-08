@@ -228,30 +228,34 @@
                 const begin = new Date(record.begin);
                 const end = record.end ? new Date(record.end) : null;
                 if (!isNaN(begin.getTime()) && end && !isNaN(end.getTime())) {
-                    const years = end.getFullYear() - begin.getFullYear();
+                    let years = end.getFullYear() - begin.getFullYear();
                     let months = end.getMonth() - begin.getMonth();
                     let days = end.getDate() - begin.getDate();
                     if (days < 0) {
                         months--;
                     }
                     if (months < 0) {
+                        years--;
                         months += 12;
                     }
+                    if (years < 0) { years = 0; months = 0; }
                     notesText = `${years} years and ${months} months old`;
                 }
             } else if (record.event === 'Married') {
                 const begin = new Date(record.begin);
                 const end = record.end ? new Date(record.end) : null;
                 if (!isNaN(begin.getTime()) && end && !isNaN(end.getTime())) {
-                    const years = end.getFullYear() - begin.getFullYear();
+                    let years = end.getFullYear() - begin.getFullYear();
                     let months = end.getMonth() - begin.getMonth();
                     let days = end.getDate() - begin.getDate();
                     if (days < 0) {
                         months--;
                     }
                     if (months < 0) {
+                        years--;
                         months += 12;
                     }
+                    if (years < 0) { years = 0; months = 0; }
                     notesText += (notesText ? ' ' : '') + `Married ${years}y ${months}m`;
                 }
             }
