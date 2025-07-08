@@ -116,6 +116,9 @@
         <style>
         /* Responsive tweaks for mobile */
         @media (max-width: 600px) {
+            html, body {
+                font-size: 18px;
+            }
             #levelFilterRow .column,
             #eventForm .column {
                 flex: 1 1 100%;
@@ -126,10 +129,34 @@
             }
             .data-table th, .data-table td {
                 white-space: nowrap;
+                font-size: 1.1em;
+                padding: 0.75em 0.5em;
+            }
+            #eventForm textarea,
+            #eventForm select,
+            #eventForm input[type="date"] {
+                font-size: 1.1em;
+                padding: 0.6em;
+            }
+            #eventForm button,
+            #levelFilterRow button {
+                font-size: 1.1em;
+                padding: 0.7em 1.2em;
+                min-width: 44px;
+                min-height: 44px;
             }
             #eventForm textarea {
                 min-width: 0;
             }
+            /* Hide Notes column on very small screens */
+            .data-table th:nth-child(5),
+            .data-table td:nth-child(5) {
+                display: none;
+            }
+        }
+        /* Slightly larger base font for all screens */
+        html, body {
+            font-size: 16px;
         }
         </style>
 
