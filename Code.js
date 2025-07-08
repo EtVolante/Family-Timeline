@@ -49,7 +49,11 @@ function getData() {
       headers.forEach((header, index) => {
         // Trim whitespace from header names and convert to camelCase for cleaner JS object keys
         const formattedHeader = header.trim().replace(/[^a-zA-Z0-9]+(.)?/g, (match, chr) => chr ? chr.toUpperCase() : '').replace(/^./, str => str.toLowerCase());
-        record[formattedHeader] = row[index];
+        let cellValue = row[index];
+        if (cellValue instanceof Date) {
+          cellValue = cellValue.toISOString();
+        }
+        record[formattedHeader] = cellValue;
       });
       records.push(record);
     }

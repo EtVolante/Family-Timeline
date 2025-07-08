@@ -14,7 +14,45 @@
     <div class="container">
         <h1>Family Timeline Data Management</h1>
         <p>Manage your family timeline events (Add, View, Update, Delete).</p>
-        <p class="version-info">Version: 2.0.0 - Updated data structure with Person, Event, Begin/End dates, Notes, and Level fields</p>
+        <p class="version-info">Version: 2.1.0 - Updated data structure with Person, Event, Begin/End dates, Notes, and Level fields</p>
+
+        <!-- Data Table -->
+        <div class="section">
+            <h3>All Timeline Events</h3>
+            <!-- Level Filter UI -->
+            <div class="row" id="levelFilterRow">
+                <div class="column">
+                    <label for="minLevel">Min Level:</label>
+                    <input type="number" id="minLevel" placeholder="Min" min="0">
+                </div>
+                <div class="column">
+                    <label for="maxLevel">Max Level:</label>
+                    <input type="number" id="maxLevel" placeholder="Max" min="0">
+                </div>
+                <div class="column">
+                    <button type="button" id="applyLevelFilter">Filter</button>
+                </div>
+            </div>
+            <div id="loadingIndicator" class="loading-indicator">Loading data...</div>
+            <div id="messageBox" class="message-box"></div>
+            <div class="data-table-container">
+                <table class="data-table" id="eventTable">
+                    <thead>
+                        <tr>
+                            <th>Person</th>
+                            <th>Event</th>
+                            <th>Begin Date</th>
+                            <th>End Date</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Data rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+                <p id="noRecords" class="no-records" style="display:none;">No records found.</p>
+            </div>
+        </div>
 
         <!-- Form for Add/Update -->
         <div class="section">
@@ -62,30 +100,6 @@
             </form>
         </div>
 
-        <!-- Data Table -->
-        <div class="section">
-            <h3>All Timeline Events</h3>
-            <div id="loadingIndicator" class="loading-indicator">Loading data...</div>
-            <div id="messageBox" class="message-box"></div>
-            <div class="data-table-container">
-                <table class="data-table" id="eventTable">
-                    <thead>
-                        <tr>
-                            <th>Person</th>
-                            <th>Event</th>
-                            <th>Begin Date</th>
-                            <th>End Date</th>
-                            <th>Notes</th>
-                            <th>Level</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Data rows will be inserted here by JavaScript -->
-                    </tbody>
-                </table>
-                <p id="noRecords" class="no-records" style="display:none;">No records found.</p>
-            </div>
-        </div>
     </div>
 
     <!-- Custom JavaScript -->
