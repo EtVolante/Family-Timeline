@@ -5,49 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Family Timeline Data Management</title>
     <!-- Milligram CSS -->
-     <!-- Google Fonts -->
-    <link rel="stylesheet" target="blank" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+    <!-- Google Fonts -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+
     <!-- CSS Reset -->
-    <link rel="stylesheet" target="blank" href="https://raw.githubusercontent.com/necolas/normalize.css/master/normalize.css">
-    <!-- Milligram CSS minified -->
-    <link rel="stylesheet" href="milligram/dist/milligram.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
+
+    <!-- Milligram CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
     <!-- Custom Stylesheet -->
-    <?!= include('Stylesheet'); ?> 
+     
+    
 </head>
 <body>
     <div class="container">
         <h1>Family Timeline Data Management</h1>
-        <p>Manage your family timeline events (Add, View, Update, Delete).</p>
-        <p class="version-info">Version: 3.1.0 - Improved responsive design and mobile usability</p>
+        <p class="version-info">Version: 3.2.2 - GUI Management</p>
 
         <!-- Level and Date Filter UI -->
-        <div class="row" id="levelFilterRow" style="margin-bottom: 1em;">
-            <div class="column column-20">
+        <div class="row" id="filterCriteriaContainer">
+            <div class="column">
                 <label for="minLevel">Min Level:</label>
                 <select id="minLevel"></select>
             </div>
-            <div class="column column-20">
+            <div class="column">
                 <label for="maxLevel">Max Level:</label>
                 <select id="maxLevel"></select>
             </div>
-            <div class="column column-20">
+            <div class="column">
                 <label for="filterDate">Filter Date:</label>
                 <input type="date" id="filterDate">
             </div>
-            <div class="column column-20">
+            <div class="column">
                 <label for="sortBy">Sort By:</label>
                 <select id="sortBy">
-                    <option value="person" selected>Person</option>
-                    <option value="begin">Begin Date</option>
+                    <option value="person">Person</option>
+                    <option value="begin" selected>Begin Date</option>
                 </select>
             </div>
-            <div class="column column-20" style="display: flex; align-items: flex-end;">
-                <button type="button" id="applyLevelFilter" style="width: 100%;">Filter</button>
+            <div class="column">
+                <button type="button" id="clearFilters">Clear</button>
             </div>
         </div>
 
         <!-- Data Table -->
-        <div class="section">
+        <div class="section" id="dataTableContainer">
             <h3>All Timeline Events</h3>
             <div id="loadingIndicator" class="loading-indicator">Loading data...</div>
             <div id="messageBox" class="message-box"></div>
@@ -60,6 +62,7 @@
                             <th>Begin Date</th>
                             <th>End Date</th>
                             <th>Notes</th>
+                            <th>Edit</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -71,7 +74,7 @@
         </div>
 
         <!-- Form for Add/Update -->
-        <div class="section">
+        <div class="section" id="editFormContainer" style="display:none;">
             <h3 id="formTitle">Add New Timeline Event</h3>
             <form id="eventForm">
                 <div class="row">

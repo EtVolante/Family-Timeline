@@ -203,10 +203,7 @@
         // Update table header for 'Since' column
         const $theadRow = $('#eventTable thead tr');
         $theadRow.empty();
-        $theadRow.append('<th>Person</th><th>Event</th><th>Begin Date</th><th>End Date</th><th>Notes</th>');
-        if (filterDate) {
-            $theadRow.append('<th>Since</th>');
-        }
+        $theadRow.append('<th>Person</th><th>Event</th><th>Begin Date</th><th>End Date</th><th>Notes</th>' + (filterDate ? '<th>Since</th>' : '') + '<th>Edit</th>');
 
         if (filteredRecords.length === 0) {
             $noRecordsMessage.show();
@@ -222,7 +219,6 @@
                 $row.addClass('age-row');
             }
             // Create cells for each field. Order matters for display.
-            console.log('Rendering End Date:', record.end); // Debug log
             let notesText = record.notes || '';
             if (record.event === 'Age') {
                 const begin = new Date(record.begin);
@@ -259,14 +255,51 @@
                     notesText += (notesText ? ' ' : '') + `Married ${years}y ${months}m`;
                 }
             }
+            // Create clickable date cells
+            const $beginDateCell = $('<td>').text(formatDateForDisplay(record.begin) || '');
+            if (record.begin) {
+                $beginDateCell.addClass('clickable-date').css('cursor', 'pointer');
+                $beginDateCell.on('click', function(e) {
+                    e.stopPropagation();
+                    $('#filterDate').val(formatDateForInput(record.begin));
+                    saveFiltersToLocalStorage();
+                    renderTable(currentRecords);
+                });
+            }
+            const $endDateCell = $('<td>').text(formatDateForDisplay(record.end) || '');
+            if (record.end) {
+                $endDateCell.addClass('clickable-date').css('cursor', 'pointer');
+                $endDateCell.on('click', function(e) {
+                    e.stopPropagation();
+                    $('#filterDate').val(formatDateForInput(record.end));
+                    saveFiltersToLocalStorage();
+                    renderTable(currentRecords);
+                });
+            }
+            // Edit icon button (smaller, compact SVG)
+            const $editBtn = $('<button type="button" class="edit-row-btn" title="Edit" style="background:none;border:none;padding:0;margin:0;line-height:1;cursor:pointer;"><svg width="16" height="16" viewBox="0 0 20 20" fill="none" style="display:inline-block;vertical-align:middle;"><path d="M14.85 2.85a1.2 1.2 0 0 1 1.7 1.7l-1.1 1.1-1.7-1.7 1.1-1.1zm-2.1 2.8 1.7 1.7-8.1 8.1c-.1.1-.2.2-.3.3l-2.1.6c-.3.1-.6-.2-.5-.5l.6-2.1c.1-.1.2-.2.3-.3l8.1-8.1z" fill="#0074d9"/></svg></button>');
+            $editBtn.on('click', function(e) {
+                e.stopPropagation();
+                selectRow(rowId, true); // pass true to indicate show form
+                // Scroll to form
+                $('html, body').animate({ scrollTop: $('#editFormContainer').offset().top }, 300);
+            });
+            // Make name clickable to filter by level
+            const $nameCell = $('<td>').addClass('clickable-name').css({'text-decoration':'underline','color':'#0074d9','cursor':'pointer'}).text(record.person || '');
+            $nameCell.on('click', function(e) {
+                e.stopPropagation();
+                $('#minLevel').val(record.level);
+                $('#maxLevel').val(record.level);
+                saveFiltersToLocalStorage();
+                renderTable(currentRecords);
+            });
             $row.append(
-                $('<td>').text(record.person || ''),
+                $nameCell,
                 $('<td>').text(record.event || ''),
-                $('<td>').text(formatDateForDisplay(record.begin) || ''),
-                $('<td>').text(formatDateForDisplay(record.end) || ''),
+                $beginDateCell,
+                $endDateCell,
                 $('<td>').text(notesText)
             );
-            // Add 'Since' column if filterDate is set
             if (filterDate) {
                 const begin = new Date(record.begin);
                 let sinceText = '';
@@ -278,10 +311,7 @@
                 }
                 $row.append($('<td>').text(sinceText));
             }
-            // Add click listener to select row for editing/deleting
-            $row.on('click', function() {
-                selectRow(rowId);
-            });
+            $row.append($('<td>').append($editBtn));
             $eventTableBody.append($row);
         });
 
@@ -290,6 +320,14 @@
             const style = document.createElement('style');
             style.id = 'age-row-style';
             style.innerHTML = '.age-row { background-color: #fffbe6 !important; }';
+            document.head.appendChild(style);
+        }
+
+        // Add CSS for clickable date cells
+        if (!document.getElementById('clickable-date-style')) {
+            const style = document.createElement('style');
+            style.id = 'clickable-date-style';
+            style.innerHTML = '.clickable-date { text-decoration: underline; color: #0074d9; }';
             document.head.appendChild(style);
         }
 
@@ -361,7 +399,7 @@
      * Selects a row in the table, populating the form for editing.
      * @param {string} rowId - The unique ID of the record to select.
      */
-    function selectRow(rowId) {
+    function selectRow(rowId, showForm) {
         $('.data-table tr.selected-row').removeClass('selected-row');
         $(`.data-table tr[data-id="${rowId}"]`).addClass('selected-row');
         selectedRowId = rowId;
@@ -375,10 +413,15 @@
             $('#endDate').val(formatDateForInput(record.end) || '');
             $('#notes').val(record.notes || '');
             $('#level').val(record.level || '');
-            setFormReadOnly(true);
-            $('#editButton').show();
-            $('#saveButton').prop('disabled', true);
+            setFormReadOnly(false); // Make fields editable
+            $('#editButton').hide();
+            $('#saveButton').prop('disabled', false);
             $deleteButton.show();
+            if (showForm) {
+                $('#dataTableContainer').hide();
+                $('#editFormContainer').show();
+                $('#filterCriteriaContainer').hide();
+            }
         }
     }
 
@@ -399,6 +442,8 @@
         $deleteButton.hide();
         selectedRowId = null;
         $('.data-table tr.selected-row').removeClass('selected-row');
+        $('#editFormContainer').hide();
+        $('#dataTableContainer').show();
     }
 
     /**
@@ -466,11 +511,18 @@
     function handleFormSubmit(e) {
         e.preventDefault();
         showLoading('Saving data...');
+        // Always save dates in YYYY-MM-DD format
+        function toYMD(val) {
+            if (!val) return '';
+            const d = new Date(val);
+            if (isNaN(d.getTime())) return '';
+            return d.toISOString().split('T')[0];
+        }
         const record = {
             person: $('#person').val(),
             event: $('#event').val(),
-            begin: $('#beginDate').val(),
-            end: $('#endDate').val(),
+            begin: toYMD($('#beginDate').val()),
+            end: toYMD($('#endDate').val()),
             notes: $('#notes').val(),
             level: $('#level').val()
         };
@@ -481,7 +533,7 @@
             google.script.run
                 .withSuccessHandler(() => {
                     showMessage('Record updated successfully!', 'success');
-                    resetForm();
+                    showTableHideForm();
                     fetchRecords();
                 })
                 .withFailureHandler(error => {
@@ -492,7 +544,7 @@
             google.script.run
                 .withSuccessHandler(() => {
                     showMessage('Record added successfully!', 'success');
-                    resetForm();
+                    showTableHideForm();
                     fetchRecords();
                 })
                 .withFailureHandler(error => {
@@ -511,7 +563,7 @@
             google.script.run
                 .withSuccessHandler(() => {
                     showMessage('Record deleted successfully!', 'success');
-                    resetForm();
+                    showTableHideForm();
                     fetchRecords(); // Refresh table
                 })
                 .withFailureHandler(error => {
@@ -525,7 +577,7 @@
      * Handles canceling an edit/add operation.
      */
     function handleCancel() {
-        resetForm();
+        showTableHideForm();
     }
 
     /**
@@ -559,36 +611,66 @@
         });
     }
 
-    // Add event listener for the filter button
-    $(document).on('click', '#applyLevelFilter', function() {
+    // Store and restore filter settings
+    function saveFiltersToLocalStorage() {
+        localStorage.setItem('timelineFilters', JSON.stringify({
+            minLevel: $('#minLevel').val(),
+            maxLevel: $('#maxLevel').val(),
+            filterDate: $('#filterDate').val(),
+            sortBy: $('#sortBy').val()
+        }));
+    }
+    function restoreFiltersFromLocalStorage() {
+        const filters = JSON.parse(localStorage.getItem('timelineFilters') || '{}');
+        if (filters.minLevel) $('#minLevel').val(filters.minLevel);
+        if (filters.maxLevel) $('#maxLevel').val(filters.maxLevel);
+        if (filters.filterDate) $('#filterDate').val(filters.filterDate);
+        if (filters.sortBy) $('#sortBy').val(filters.sortBy);
+    }
+
+    // On filter change, save to localStorage
+    $(document).on('change', '#minLevel, #maxLevel, #filterDate, #sortBy', function() {
+        saveFiltersToLocalStorage();
+        renderTable(currentRecords);
+    });
+    // On clear, also update localStorage
+    $(document).on('click', '#clearFilters', function() {
+        const $minLevel = $('#minLevel');
+        const $maxLevel = $('#maxLevel');
+        const $filterDate = $('#filterDate');
+        const $sortBy = $('#sortBy');
+        if ($minLevel.children().length > 0) {
+            $minLevel.val($minLevel.children().first().val());
+        }
+        if ($maxLevel.children().length > 0) {
+            $maxLevel.val($maxLevel.children().last().val());
+        }
+        $filterDate.val('');
+        $sortBy.val('begin');
+        saveFiltersToLocalStorage();
         renderTable(currentRecords);
     });
 
-    // Optionally, update table on filter select or date change
-    $(document).on('change', '#minLevel, #maxLevel, #filterDate', function() {
-        renderTable(currentRecords);
-    });
-
-    // Edit button logic
-    $(document).on('click', '#editButton', function() {
-        setFormReadOnly(false);
-        $('#saveButton').prop('disabled', false);
-        $('#editButton').hide();
-    });
-
-    // Add event listener for the sort dropdown
-    $(document).on('change', '#sortBy', function() {
-        renderTable(currentRecords);
-    });
+    // When cancel, save, or delete, hide form and show table
+    function showTableHideForm() {
+        $('#editFormContainer').hide();
+        $('#dataTableContainer').show();
+        $('#filterCriteriaContainer').show();
+        resetForm();
+    }
 
     // Initialize everything when DOM is loaded
     $(document).ready(function() {
         if (initializeDOMElements()) {
+            restoreFiltersFromLocalStorage();
+            if (!$('#sortBy').val()) $('#sortBy').val('begin');
             initializeEventListeners();
             addEnhancements();
             fetchRecords();
             setFormReadOnly(false);
             $('#editButton').hide();
+            $('#editFormContainer').hide();
+            $('#dataTableContainer').show();
         } else {
             console.error('Failed to initialize DOM elements');
             showMessage('Failed to initialize the application. Please refresh the page.', 'error');
