@@ -4,57 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Family Timeline Data Management</title>
-    <!-- Milligram CSS -->
-    <!-- Google Fonts -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
-
-    <!-- CSS Reset -->
+    <!-- Normalize CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
-
-    <!-- Milligram CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/milligram/1.4.1/milligram.css">
+    <!-- Skeleton CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
     <!-- Custom Stylesheet -->
-     
-    
+   
 </head>
 <body>
     <div class="container">
-        <h1>Family Timeline Data Management</h1>
-        <p class="version-info">Version: 3.2.2 - GUI Management</p>
+        <h1 style="margin-bottom: 0.5em;">Family Timeline</h1>
+        <p class="version-info" style="margin-bottom: 1.5em;">Version: 4.1.1</p>
 
         <!-- Level and Date Filter UI -->
-        <div class="row" id="filterCriteriaContainer">
-            <div class="column">
-                <label for="minLevel">Min Level:</label>
-                <select id="minLevel"></select>
+        <div class="row" id="filterCriteriaContainer" style="margin-bottom: 1.5em;">
+            <div class="two columns">
+                <label for="minLevel">Min Level</label>
+                <select id="minLevel" class="u-full-width"></select>
             </div>
-            <div class="column">
-                <label for="maxLevel">Max Level:</label>
-                <select id="maxLevel"></select>
+            <div class="two columns">
+                <label for="maxLevel">Max Level</label>
+                <select id="maxLevel" class="u-full-width"></select>
             </div>
-            <div class="column">
-                <label for="filterDate">Filter Date:</label>
-                <input type="date" id="filterDate">
+            <div class="three columns">
+                <label for="filterDate">Filter Date</label>
+                <input type="date" id="filterDate" class="u-full-width" style="height: 38px; padding: 6px 10px; border: 1px solid #D1D1D1; border-radius: 4px;">
             </div>
-            <div class="column">
-                <label for="sortBy">Sort By:</label>
-                <select id="sortBy">
+            <div class="two columns">
+                <label for="sortBy">Sort By</label>
+                <select id="sortBy" class="u-full-width">
                     <option value="person">Person</option>
                     <option value="begin" selected>Begin Date</option>
                 </select>
             </div>
-            <div class="column">
-                <button type="button" id="clearFilters">Clear</button>
+                <div class="two columns">
+                <button type="button" id="clearFilters" class="button-primary u-full-width">Clear</button>
             </div>
         </div>
 
         <!-- Data Table -->
-        <div class="section" id="dataTableContainer">
-            <h3>All Timeline Events</h3>
+        <div class="section" id="dataTableContainer" style="padding: 1em;">
+            <h5 style="margin-top: 0;">All Timeline Events</h5>
             <div id="loadingIndicator" class="loading-indicator">Loading data...</div>
             <div id="messageBox" class="message-box"></div>
-            <div class="data-table-container responsive-table" style="overflow-x: auto;">
-                <table class="data-table" id="eventTable">
+            <div class="responsive-table" style="overflow-x: auto;">
+                <table class="u-full-width" id="eventTable" style="margin-bottom: 0;">
                     <thead>
                         <tr>
                             <th>Person</th>
@@ -62,7 +56,6 @@
                             <th>Begin Date</th>
                             <th>End Date</th>
                             <th>Notes</th>
-                            <th>Edit</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -73,96 +66,7 @@
             </div>
         </div>
 
-        <!-- Form for Add/Update -->
-        <div class="section" id="editFormContainer" style="display:none;">
-            <h3 id="formTitle">Add New Timeline Event</h3>
-            <form id="eventForm">
-                <div class="row">
-                    <div class="column column-20">
-                        <label for="person">Person:</label>
-                        <select id="person" required readonly></select>
-                    </div>
-                    <div class="column column-20">
-                        <label for="event">Event:</label>
-                        <select id="event" required readonly></select>
-                    </div>
-                    <div class="column column-20">
-                        <label for="beginDate">Begin Date:</label>
-                        <input type="date" id="beginDate" required readonly>
-                    </div>
-                    <div class="column column-20">
-                        <label for="endDate">End Date:</label>
-                        <input type="date" id="endDate" placeholder="Optional" readonly>
-                    </div>
-                    <div class="column column-20">
-                        <label for="level">Level:</label>
-                        <select id="level" readonly></select>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="column column-80">
-                        <label for="notes">Notes:</label>
-                        <textarea id="notes" placeholder="Additional details about the event." readonly style="resize: vertical; width: 100%;"></textarea>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="column" style="display: flex; justify-content: flex-start; gap: 1em;">
-                        <button type="button" id="editButton">Edit</button>
-                        <button type="submit" id="saveButton" disabled>Save</button>
-                        <button type="button" id="deleteButton" class="delete-btn" style="display:none;">Delete</button>
-                        <button type="button" id="cancelButton" class="button-outline">Cancel</button>
-                    </div>
-                </div>
-            </form>
-        </div>
-
-        <style>
-        /* Responsive tweaks for mobile */
-        @media (max-width: 600px) {
-            html, body {
-                font-size: 18px;
-            }
-            #levelFilterRow .column,
-            #eventForm .column {
-                flex: 1 1 100%;
-                max-width: 100%;
-            }
-            .responsive-table {
-                overflow-x: auto;
-            }
-            .data-table th, .data-table td {
-                white-space: nowrap;
-                font-size: 1.1em;
-                padding: 0.75em 0.5em;
-            }
-            #eventForm textarea,
-            #eventForm select,
-            #eventForm input[type="date"] {
-                font-size: 1.1em;
-                padding: 0.6em;
-            }
-            #eventForm button,
-            #levelFilterRow button {
-                font-size: 1.1em;
-                padding: 0.7em 1.2em;
-                min-width: 44px;
-                min-height: 44px;
-            }
-            #eventForm textarea {
-                min-width: 0;
-            }
-            /* Hide Notes column on very small screens */
-            .data-table th:nth-child(5),
-            .data-table td:nth-child(5) {
-                display: none;
-            }
-        }
-        /* Slightly larger base font for all screens */
-        html, body {
-            font-size: 16px;
-        }
-        </style>
-
+      
     </div>
 
     <!-- Custom JavaScript -->

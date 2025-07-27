@@ -1,6 +1,6 @@
 <style>
     body {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', 'Roboto', Arial, sans-serif;
         background-color: #f4f4f4;
         color: #333;
         padding: 20px 0;
@@ -11,7 +11,7 @@
         padding: 20px;
         background-color: #fff;
         border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.07);
     }
     h1, h2 {
         text-align: center;
@@ -20,22 +20,22 @@
     }
     .version-info {
         text-align: center;
-        background-color: #e8f4fd;
+        background-color: #f2f8fc;
         color: #0c5460;
-        padding: 10px 15px;
-        border-radius: 6px;
-        border-left: 4px solid #17a2b8;
+        padding: 8px 12px;
+        border-radius: 5px;
+        border-left: 4px solid #1eaedb;
         margin-bottom: 20px;
-        font-size: 0.9em;
+        font-size: 0.95em;
         font-weight: 500;
     }
     .section {
         border: 1px solid #e1e1e1;
         border-radius: 8px;
-        padding: 20px;
+        padding: 1em;
         margin-bottom: 30px;
-        background-color: #fdfdfd;
-        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05);
+        background-color: #fafbfc;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.03);
     }
     .section h3 {
         margin-top: 0;
@@ -158,5 +158,40 @@
         justify-content: flex-end; /* Align buttons to the right */
         gap: 10px;
         margin-top: 20px;
+    }
+    .responsive-table {
+        overflow-x: auto;
+    }
+    table.u-full-width th, table.u-full-width td {
+        white-space: nowrap;
+        font-size: 1em;
+        padding: 0.5em 0.3em;
+    }
+    .age-row {
+        background-color: #e5f3b2 !important;
+    }
+    .clickable-date {
+        cursor: pointer;
+        text-decoration: underline;
+    }
+    @media (max-width: 600px) {
+        html, body {
+            font-size: 17px;
+        }
+        .container {
+            padding: 10px;
+        }
+        .row {
+            flex-direction: column;
+        }
+        table.u-full-width th, table.u-full-width td {
+            font-size: 1em;
+            padding: 0.5em 0.2em;
+        }
+        /* Hide Notes column on very small screens */
+        table.u-full-width th:nth-child(5),
+        table.u-full-width td:nth-child(5) {
+            display: none;
+        }
     }
 </style>
