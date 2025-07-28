@@ -9,12 +9,11 @@
     <!-- Skeleton CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
     <!-- Custom Stylesheet -->
-   
+    <?!= include('Stylesheet'); ?>
 </head>
 <body>
     <div class="container">
-        <h1 style="margin-bottom: 0.5em;">Family Timeline</h1>
-        <p class="version-info" style="margin-bottom: 1.5em;">Version: 4.1.1</p>
+        <h3 style="margin-bottom: 0.5em;">Family Timeline v4.2.4</h3>
 
         <!-- Level and Date Filter UI -->
         <div class="row" id="filterCriteriaContainer" style="margin-bottom: 1.5em;">
@@ -26,9 +25,15 @@
                 <label for="maxLevel">Max Level</label>
                 <select id="maxLevel" class="u-full-width"></select>
             </div>
-            <div class="three columns">
+            <div class="two columns">
                 <label for="filterDate">Filter Date</label>
                 <input type="date" id="filterDate" class="u-full-width" style="height: 38px; padding: 6px 10px; border: 1px solid #D1D1D1; border-radius: 4px;">
+            </div>
+            <div class="two columns">
+                <label for="eventType">Event Type</label>
+                <select id="eventType" class="u-full-width">
+                    <option value="">All Events</option>
+                </select>
             </div>
             <div class="two columns">
                 <label for="sortBy">Sort By</label>
@@ -37,14 +42,13 @@
                     <option value="begin" selected>Begin Date</option>
                 </select>
             </div>
-                <div class="two columns">
+            <div class="two columns">
                 <button type="button" id="clearFilters" class="button-primary u-full-width">Clear</button>
             </div>
         </div>
 
         <!-- Data Table -->
         <div class="section" id="dataTableContainer" style="padding: 1em;">
-            <h5 style="margin-top: 0;">All Timeline Events</h5>
             <div id="loadingIndicator" class="loading-indicator">Loading data...</div>
             <div id="messageBox" class="message-box"></div>
             <div class="responsive-table" style="overflow-x: auto;">

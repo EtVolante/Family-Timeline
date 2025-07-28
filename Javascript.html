@@ -51,9 +51,10 @@
         $eventTableBody.empty();
         const filterDateStr = $('#filterDate').val();
         const filterDate = filterDateStr ? new Date(filterDateStr) : null;
+        const eventTypeFilter = $('#eventType').val();
         // Get min and max level from dropdowns
         const minLevel = parseInt($('#minLevel').val(), 10) || 1;
-        const maxLevel = parseInt($('#maxLevel').val(), 10) || 12;
+        const maxLevel = parseInt($('#maxLevel').val(), 10) || 15;
         //console.log('Filter levels:', { minLevel, maxLevel });
         let filteredRecords = records.filter(record => {
             const level = parseInt(record.level, 10);
@@ -64,6 +65,14 @@
             return isInRange;
         });
         //console.log('Filtered records count:', filteredRecords.length);
+        
+        // Apply event type filter if set
+        if (eventTypeFilter) {
+            filteredRecords = filteredRecords.filter(record => {
+                return (record.event || '').trim() === eventTypeFilter;
+            });
+        }
+        
         // Apply date filter if set
         if (filterDate) {
             filteredRecords = filteredRecords.filter(record => {
@@ -106,9 +115,9 @@
         $noRecordsMessage.hide();
         filteredRecords.forEach(record => {
             const $row = $('<tr>');
-            if ((record.event || '').trim() === 'Age') $row.addClass('age-row');
+            if ((record.event || '').trim() === 'Alive') $row.addClass('alive-row');
             let notesText = record.notes || '';
-            if ((record.event || '').trim() === 'Age') {
+            if ((record.event || '').trim() === 'Alive') {
                 const begin = new Date(record.begin);
                 const end = record.end ? new Date(record.end) : null;
                 if (!isNaN(begin.getTime()) && end && !isNaN(end.getTime())) {
@@ -181,6 +190,7 @@
             minLevel: $('#minLevel').val(),
             maxLevel: $('#maxLevel').val(),
             filterDate: $('#filterDate').val(),
+            eventType: $('#eventType').val(),
             sortBy: $('#sortBy').val()
         }));
     }
@@ -189,6 +199,7 @@
         if (filters.minLevel) $('#minLevel').val(filters.minLevel);
         if (filters.maxLevel) $('#maxLevel').val(filters.maxLevel);
         if (filters.filterDate) $('#filterDate').val(filters.filterDate);
+        if (filters.eventType) $('#eventType').val(filters.eventType);
         if (filters.sortBy) $('#sortBy').val(filters.sortBy);
     }
     function populateLevelDropdowns() {
@@ -196,12 +207,55 @@
         const $maxLevel = $('#maxLevel');
         $minLevel.empty();
         $maxLevel.empty();
-        for (let i = 1; i <= 12; i++) {
-            $minLevel.append($('<option>').val(i).text(i));
-            $maxLevel.append($('<option>').val(i).text(i));
+        
+        // Get level labels from localStorage or fetch from server
+        const levelLabels = JSON.parse(localStorage.getItem('levelLabels') || '[]');
+
+        // Determine the maximum level dynamically, ensuring at least 15 levels are shown as a fallback.
+        const maxLevelFromData = levelLabels.length > 0 
+            ? Math.max(...levelLabels.map(l => parseInt(l.level, 10)).filter(Number.isFinite)) 
+            : 0;
+        const maxLevelToShow = Math.max(15, maxLevelFromData);
+        
+        for (let i = 1; i <= maxLevelToShow; i++) {
+            const label = levelLabels.find(l => l.level == i);
+            const displayText = label ? `${i} - ${label.label}` : i.toString();
+            $minLevel.append($('<option>').val(i).text(displayText));
+            $maxLevel.append($('<option>').val(i).text(displayText));
         }
     }
-    $(document).on('change', '#minLevel, #maxLevel, #filterDate, #sortBy', function() {
+
+    function fetchLevelLabels() {
+        google.script.run
+            .withSuccessHandler(labels => {
+                localStorage.setItem('levelLabels', JSON.stringify(labels));
+                populateLevelDropdowns();
+            })
+            .withFailureHandler(error => {
+                console.warn('Failed to fetch level labels:', error);
+                // Continue with numeric-only labels
+                populateLevelDropdowns();
+            })
+            .getLevelLabels();
+    }
+    function populateEventTypeDropdown(records) {
+        const $eventType = $('#eventType');
+        const eventTypes = new Set();
+        records.forEach(record => {
+            if (record.event && record.event.trim()) {
+                eventTypes.add(record.event.trim());
+            }
+        });
+        
+        // Clear existing options except "All Events"
+        $eventType.find('option:not(:first)').remove();
+        
+        // Add event types sorted alphabetically
+        Array.from(eventTypes).sort().forEach(eventType => {
+            $eventType.append($('<option>').val(eventType).text(eventType));
+        });
+    }
+    $(document).on('change', '#minLevel, #maxLevel, #filterDate, #eventType, #sortBy', function() {
         saveFiltersToLocalStorage();
         renderTable(currentRecords);
     });
@@ -209,10 +263,12 @@
         const $minLevel = $('#minLevel');
         const $maxLevel = $('#maxLevel');
         const $filterDate = $('#filterDate');
+        const $eventType = $('#eventType');
         const $sortBy = $('#sortBy');
         $minLevel.val('1');
-        $maxLevel.val('12');
+        $maxLevel.val('15');
         $filterDate.val('');
+        $eventType.val('');
         $sortBy.val('begin');
         saveFiltersToLocalStorage();
         renderTable(currentRecords);
@@ -222,6 +278,7 @@
         google.script.run
             .withSuccessHandler(records => {
                 currentRecords = records; // Store the full dataset for filtering
+                populateEventTypeDropdown(records); // Populate event type dropdown
                 renderTable(currentRecords);
                 hideLoading();
             })
@@ -232,7 +289,7 @@
     }
     $(document).ready(function() {
         if (initializeDOMElements()) {
-            populateLevelDropdowns();
+            fetchLevelLabels(); // Fetch level labels first
             restoreFiltersFromLocalStorage();
             if (!$('#sortBy').val()) $('#sortBy').val('begin');
             fetchRecords();

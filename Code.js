@@ -65,3 +65,37 @@ function getData() {
     throw new Error("Failed to retrieve data: " + e.message);
   }
 }
+
+/**
+ * Gets level labels from the 'level_labels' named range.
+ * @returns {Array<Object>} An array of objects with level and label properties.
+ */
+function getLevelLabels() {
+  try {
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const range = spreadsheet.getRangeByName('level_labels');
+    if (!range) {
+      throw new Error('Named range "level_labels" not found in spreadsheet.');
+    }
+
+    const values = range.getValues();
+    if (values.length === 0) {
+      return []; // No data in the range
+    }
+
+    const labels = [];
+    for (let i = 1; i < values.length; i++) { // Start from second row (skip header)
+      const row = values[i];
+      if (row[0] && row[1]) { // Both level and label should exist
+        labels.push({
+          level: row[0],
+          label: row[1]
+        });
+      }
+    }
+    return labels;
+  } catch (e) {
+    Logger.log("Error in getLevelLabels: " + e.message);
+    throw new Error("Failed to retrieve level labels: " + e.message);
+  }
+}
