@@ -11,6 +11,7 @@ var SHEET_NAME = "Data";  // Sheet name for event data
 function doGet() {
   return HtmlService.createTemplateFromFile('Index.html')
     .evaluate()
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
     .setTitle('Family Timeline Information');
 }
 

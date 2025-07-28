@@ -226,34 +226,48 @@
     }
 
     function fetchLevelLabels() {
+        // This function will now orchestrate the initial data load
+        // because restoring filters depends on the dropdowns being populated first.
+        const onComplete = () => {
+            populateLevelDropdowns();
+            restoreFiltersFromLocalStorage();
+            if (!$('#sortBy').val()) $('#sortBy').val('begin');
+            fetchRecords();
+        };
+
         google.script.run
             .withSuccessHandler(labels => {
                 localStorage.setItem('levelLabels', JSON.stringify(labels));
-                populateLevelDropdowns();
+                onComplete();
             })
             .withFailureHandler(error => {
                 console.warn('Failed to fetch level labels:', error);
-                // Continue with numeric-only labels
-                populateLevelDropdowns();
+                // Even on failure, proceed to populate dropdowns, restore filters, and fetch data.
+                onComplete();
             })
             .getLevelLabels();
     }
     function populateEventTypeDropdown(records) {
         const $eventType = $('#eventType');
+        const selectedValue = $eventType.val(); // Store the currently selected value
+
         const eventTypes = new Set();
         records.forEach(record => {
             if (record.event && record.event.trim()) {
                 eventTypes.add(record.event.trim());
             }
         });
-        
+
         // Clear existing options except "All Events"
         $eventType.find('option:not(:first)').remove();
-        
+
         // Add event types sorted alphabetically
         Array.from(eventTypes).sort().forEach(eventType => {
             $eventType.append($('<option>').val(eventType).text(eventType));
         });
+
+        // Restore the previously selected value
+        $eventType.val(selectedValue);
     }
     $(document).on('change', '#minLevel, #maxLevel, #filterDate, #eventType, #sortBy', function() {
         saveFiltersToLocalStorage();
@@ -289,10 +303,8 @@
     }
     $(document).ready(function() {
         if (initializeDOMElements()) {
-            fetchLevelLabels(); // Fetch level labels first
-            restoreFiltersFromLocalStorage();
-            if (!$('#sortBy').val()) $('#sortBy').val('begin');
-            fetchRecords();
+            // This function now handles the entire startup sequence to avoid race conditions
+            fetchLevelLabels();
         } else {
             console.error('Failed to initialize DOM elements');
             showMessage('Failed to initialize the application. Please refresh the page.', 'error');
