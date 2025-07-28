@@ -113,13 +113,27 @@
             return;
         }
         $noRecordsMessage.hide();
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Normalize to start of day for accurate comparison
+
         filteredRecords.forEach(record => {
             const $row = $('<tr>');
-            if ((record.event || '').trim() === 'Alive') $row.addClass('alive-row');
+            const eventType = (record.event || '').trim();
             let notesText = record.notes || '';
-            if ((record.event || '').trim() === 'Alive') {
+
+            if (eventType === 'Alive') {
                 const begin = new Date(record.begin);
                 const end = record.end ? new Date(record.end) : null;
+
+                // Set row class based on whether the person is deceased
+                if (end && !isNaN(end.getTime()) && end < today) {
+                    $row.addClass('deceased-row');
+                } else {
+                    $row.addClass('alive-row');
+                }
+
+                // Calculate and display age in notes if end date exists
                 if (!isNaN(begin.getTime()) && end && !isNaN(end.getTime())) {
                     let years = end.getFullYear() - begin.getFullYear();
                     let months = end.getMonth() - begin.getMonth();
@@ -129,6 +143,8 @@
                     if (years < 0) { years = 0; months = 0; }
                     notesText = `${years} years and ${months} months old`;
                 }
+            } else if (eventType === 'Married') {
+                $row.addClass('married-row');
             }
             // Create clickable date cells
             const $beginDateCell = $('<td>').addClass('clickable-date').text(formatDateForDisplay(record.begin));
@@ -225,25 +241,31 @@
         }
     }
 
-    function fetchLevelLabels() {
-        // This function will now orchestrate the initial data load
-        // because restoring filters depends on the dropdowns being populated first.
-        const onComplete = () => {
-            populateLevelDropdowns();
-            restoreFiltersFromLocalStorage();
-            if (!$('#sortBy').val()) $('#sortBy').val('begin');
-            fetchRecords();
-        };
+    function updateMaxLevelOptions(minLevel) {
+        const $maxLevel = $('#maxLevel');
+        // Ensure minLevel is a number
+        const numericMinLevel = parseInt(minLevel, 10);
+        if (isNaN(numericMinLevel)) return;
 
+        $maxLevel.find('option').each(function() {
+            const optionValue = parseInt($(this).val(), 10);
+            // Disable options with a value less than the minimum level
+            $(this).prop('disabled', optionValue < numericMinLevel);
+        });
+    }
+
+    function fetchAndUpdateLevelLabels() {
+        // Fetches the latest level labels from the server and stores them
+        // in localStorage for the *next* page load. Does not update the UI.
         google.script.run
             .withSuccessHandler(labels => {
                 localStorage.setItem('levelLabels', JSON.stringify(labels));
-                onComplete();
+                console.log('Level labels updated in local storage for next refresh.');
             })
             .withFailureHandler(error => {
-                console.warn('Failed to fetch level labels:', error);
-                // Even on failure, proceed to populate dropdowns, restore filters, and fetch data.
-                onComplete();
+                // This is a background task, so we just log the error.
+                // The app will continue to function with the currently stored labels.
+                console.warn('Failed to fetch and update level labels:', error);
             })
             .getLevelLabels();
     }
@@ -270,9 +292,34 @@
         $eventType.val(selectedValue);
     }
     $(document).on('change', '#minLevel, #maxLevel, #filterDate, #eventType, #sortBy', function() {
+        // When Min Level changes, update Max Level options and value
+        if ($(this).is('#minLevel')) {
+            const minLevel = $(this).val();
+            const $maxLevel = $('#maxLevel');
+            updateMaxLevelOptions(minLevel);
+            $maxLevel.val(minLevel);
+        }
         saveFiltersToLocalStorage();
         renderTable(currentRecords);
     });
+
+    function setupApplication(records) {
+        currentRecords = records;
+
+        // 1. Populate all dynamic dropdowns based on the data.
+        populateEventTypeDropdown(records);
+
+        // 2. Restore all filters now that dropdowns have their options.
+        restoreFiltersFromLocalStorage();
+        // After restoring, ensure the max level options are correctly constrained.
+        updateMaxLevelOptions($('#minLevel').val());
+        if (!$('#sortBy').val()) $('#sortBy').val('begin');
+
+        // 3. Render the table with the restored filters applied.
+        renderTable(records);
+        hideLoading();
+    }
+
     $(document).on('click', '#clearFilters', function() {
         const $minLevel = $('#minLevel');
         const $maxLevel = $('#maxLevel');
@@ -281,30 +328,60 @@
         const $sortBy = $('#sortBy');
         $minLevel.val('1');
         $maxLevel.val('15');
+        // Re-enable all options in the max level dropdown
+        updateMaxLevelOptions(1);
         $filterDate.val('');
         $eventType.val('');
         $sortBy.val('begin');
         saveFiltersToLocalStorage();
         renderTable(currentRecords);
     });
-    function fetchRecords() {
-        showLoading();
+
+    function fetchAndUpdateRecords(isInitialLoad = false) {
+        // On first load, show the loading indicator. On subsequent loads, this runs silently in the background.
+        if (isInitialLoad) {
+            showLoading('Loading data for the first time...');
+        }
+
         google.script.run
             .withSuccessHandler(records => {
-                currentRecords = records; // Store the full dataset for filtering
-                populateEventTypeDropdown(records); // Populate event type dropdown
-                renderTable(currentRecords);
-                hideLoading();
+                // Always update the local storage cache for the next visit.
+                localStorage.setItem('timelineRecords', JSON.stringify(records));
+                console.log('Data records updated in local storage for next refresh.');
+
+                // If this is the first time loading the data, we need to render the table.
+                if (isInitialLoad) {
+                    // On first load, we need to run the full setup.
+                    setupApplication(records);
+                }
             })
             .withFailureHandler(error => {
                 showMessage('Error fetching data: ' + error.message, 'error');
+                // Ensure loading indicator is hidden on failure too.
+                if (isInitialLoad) {
+                    hideLoading();
+                }
             })
             .getData();
     }
     $(document).ready(function() {
         if (initializeDOMElements()) {
-            // This function now handles the entire startup sequence to avoid race conditions
-            fetchLevelLabels();
+            // 1. Populate static dropdowns that don't depend on data.
+            populateLevelDropdowns();
+
+            // 2. Try to load main data from cache for an instant UI.
+            const cachedRecords = JSON.parse(localStorage.getItem('timelineRecords') || 'null');
+            if (cachedRecords) {
+                console.log('Setting up application from cached records.');
+                setupApplication(cachedRecords);
+                fetchAndUpdateRecords(false); // Fetch updates in the background.
+            } else {
+                console.log('No cached records found. Performing initial fetch.');
+                fetchAndUpdateRecords(true); // Fetch for the first time, render, and cache.
+            }
+
+            // 3. In the background, fetch the latest level labels to update the cache.
+            fetchAndUpdateLevelLabels();
         } else {
             console.error('Failed to initialize DOM elements');
             showMessage('Failed to initialize the application. Please refresh the page.', 'error');
