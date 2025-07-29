@@ -139,6 +139,14 @@
     .highlight-recent {
         background-color: #FFFF00 !important; /* Neon Yellow for recent */
     }
+    .clickable-person {
+        cursor: pointer;
+        text-decoration: none; /* Remove the default underline */
+    }
+    .clickable-person:hover {
+        color: #9b4dca; /* Use primary color for interactivity */
+        text-decoration: underline;
+    }
     .clickable-date {
         cursor: pointer;
         text-decoration: none; /* Remove the default underline */
@@ -146,6 +154,12 @@
     .clickable-date:hover {
         color: #9b4dca; /* Use primary color on hover for feedback */
         text-decoration: underline; /* Add underline on hover */
+    }
+    /* Add to Stylesheet or <style> block */
+    .person-filter-active {
+        background: #ffe08a;
+        color: #b57f00;
+        font-weight: bold;
     }
     @media (max-width: 600px) {
         html, body {

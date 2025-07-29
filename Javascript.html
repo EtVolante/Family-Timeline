@@ -2,6 +2,7 @@
 <script>
     // Use google.script.run for communicating with Apps Script backend
     let currentRecords = [];
+    let personFilterOverride = null; // Used to filter by a single person, overriding other filters
     // DOM element references using jQuery
     let $eventTableBody, $loadingIndicator, $messageBox, $noRecordsMessage;
 
@@ -61,31 +62,26 @@
         // Get min and max level from dropdowns
         const minLevel = parseInt($('#minLevel').val(), 10) || 1;
         const maxLevel = parseInt($('#maxLevel').val(), 10) || 15;
-        //console.log('Filter levels:', { minLevel, maxLevel });
         let filteredRecords = records.filter(record => {
             const level = parseInt(record.level, 10);
-            //console.log('Record level:', { person: record.person, event: record.event, level, isNaN: isNaN(level) });
             if (isNaN(level)) return false;
             const isInRange = level >= minLevel && level <= maxLevel;
-            //console.log('Level in range:', { level, minLevel, maxLevel, isInRange });
             return isInRange;
         });
-        //console.log('Filtered records count:', filteredRecords.length);
-        
+
         // Apply event type filter if set
         if (eventTypeFilter) {
             filteredRecords = filteredRecords.filter(record => {
                 return (record.event || '').trim() === eventTypeFilter;
             });
         }
-        
+
         // Apply date filter if set
         if (filterDate) {
             filteredRecords = filteredRecords.filter(record => {
                 const begin = new Date(record.begin);
                 const end = record.end ? new Date(record.end) : null;
                 if (isNaN(begin.getTime())) return false;
-                // Normalize filterDate, begin, and end to YYYY-MM-DD for comparison
                 const filterYMD = formatDateForInput(filterDate);
                 const beginYMD = formatDateForInput(begin);
                 const endYMD = end && !isNaN(end.getTime()) ? formatDateForInput(end) : null;
@@ -98,6 +94,16 @@
                 }
             });
         }
+
+        // Apply person filter if set
+        if (personFilterOverride) {
+            filteredRecords = filteredRecords.filter(record => record.person === personFilterOverride);
+            // Optionally, visually indicate the filter is active (e.g., change table header)
+            $('#eventTable thead th:first').text('Person (filtered: ' + personFilterOverride + ')');
+        } else {
+            $('#eventTable thead th:first').text('Person');
+        }
+
         // Sort filteredRecords based on sortBy dropdown
         const sortBy = $('#sortBy').val() || 'person';
         filteredRecords.sort((a, b) => {
@@ -110,10 +116,14 @@
             }
             return 0;
         });
-        // Table header
+
         const $theadRow = $('#eventTable thead tr');
         $theadRow.empty();
-        $theadRow.append('<th>Person</th><th>Event</th><th>Begin Date</th><th>End Date</th><th>Notes</th>' + (filterDate ? '<th>Since</th>' : ''));
+        if (personFilterOverride) {
+            $theadRow.append('<th class="person-filter-active">Person</th><th>Event</th><th>Begin Date</th><th>End Date</th><th>Notes</th>' + (filterDate ? '<th>Since</th>' : ''));
+        } else {
+            $theadRow.append('<th>Person</th><th>Event</th><th>Begin Date</th><th>End Date</th><th>Notes</th>' + (filterDate ? '<th>Since</th>' : ''));
+        }
         if (filteredRecords.length === 0) {
             $noRecordsMessage.show();
             return;
@@ -121,7 +131,7 @@
         $noRecordsMessage.hide();
 
         const today = new Date();
-        today.setHours(0, 0, 0, 0); // Normalize to start of day for accurate comparison
+        today.setHours(0, 0, 0, 0);
         const todayDayOfYear = getDayOfYear(today);
 
         filteredRecords.forEach(record => {
@@ -133,14 +143,12 @@
                 const begin = new Date(record.begin);
                 const end = record.end ? new Date(record.end) : null;
 
-                // Set row class based on whether the person is deceased
                 if (end && !isNaN(end.getTime()) && end < today) {
                     $row.addClass('deceased-row');
                 } else {
                     $row.addClass('alive-row');
                 }
 
-                // Calculate and display age in notes if end date exists
                 if (!isNaN(begin.getTime()) && end && !isNaN(end.getTime())) {
                     let years = end.getFullYear() - begin.getFullYear();
                     let months = end.getMonth() - begin.getMonth();
@@ -153,10 +161,19 @@
             } else if (eventType === 'Married') {
                 $row.addClass('married-row');
             }
+            // Create clickable person cell
+            const $personCell = $('<td>')
+                .addClass('clickable-person')
+                .css('cursor', 'pointer')
+                .text(record.person || '')
+                .on('click', function(e) {
+                    e.stopPropagation();
+                    personFilterOverride = record.person;
+                    renderTable(currentRecords);
+                });
+
             // Create clickable date cells
             const $beginDateCell = $('<td>').addClass('clickable-date').text(formatDateForDisplay(record.begin));
-
-            // Highlight for upcoming or current anniversaries/birthdays
             const isTargetEvent = eventType === 'Alive' || eventType === 'Married';
             const end = record.end ? new Date(record.end) : null;
             let isEndDateToday = false;
@@ -175,7 +192,6 @@
                     const daysInYear = new Date(today.getFullYear(), 1, 29).getDate() === 29 ? 366 : 365;
                     let diff = beginDayOfYear - todayDayOfYear;
 
-                    // Adjust for year-end wrap-around
                     if (diff > daysInYear / 2) {
                         diff -= daysInYear;
                     } else if (diff < -daysInYear / 2) {
@@ -183,11 +199,11 @@
                     }
 
                     if (diff === 0) {
-                        $beginDateCell.addClass('highlight-today'); // On the day: Neon Orange
+                        $beginDateCell.addClass('highlight-today');
                     } else if (diff > 0 && diff <= 14) {
-                        $beginDateCell.addClass('highlight-upcoming'); // Upcoming within 2 weeks: Neon Green
+                        $beginDateCell.addClass('highlight-upcoming');
                     } else if (diff < 0 && diff >= -14) {
-                        $beginDateCell.addClass('highlight-recent'); // Recent within last 2 weeks: Neon Yellow
+                        $beginDateCell.addClass('highlight-recent');
                     }
                 }
             }
@@ -210,7 +226,7 @@
                 });
             }
             $row.append(
-                $('<td>').text(record.person || ''),
+                $personCell,
                 $('<td>').text(record.event || ''),
                 $beginDateCell,
                 $endDateCell,
@@ -227,7 +243,6 @@
             }
             $eventTableBody.append($row);
         });
-        // ... CSS for .age-row and .clickable-date if needed ...
         hideLoading();
     }
     function diffYearsMonths(start, end) {
@@ -347,6 +362,21 @@
         renderTable(currentRecords);
     });
 
+    // Update the change handler for minLevel and maxLevel to clear person filter if active
+    $(document).on('change', '#minLevel, #maxLevel', function() {
+        if (personFilterOverride) {
+            personFilterOverride = null;
+        }
+        renderTable(currentRecords);
+        saveFiltersToLocalStorage();
+    });
+
+    // Keep the existing handler for other filters
+    $(document).on('change', '#filterDate, #eventType, #sortBy', function() {
+        renderTable(currentRecords);
+        saveFiltersToLocalStorage();
+    });
+
     function setupApplication(records) {
         currentRecords = records;
 
@@ -377,6 +407,7 @@
         $filterDate.val('');
         $eventType.val('');
         $sortBy.val('begin');
+        personFilterOverride = null; // Clear person filter as well
         saveFiltersToLocalStorage();
         renderTable(currentRecords);
     });
