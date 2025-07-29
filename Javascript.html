@@ -78,21 +78,38 @@
 
         // Apply date filter if set
         if (filterDate) {
-            filteredRecords = filteredRecords.filter(record => {
-                const begin = new Date(record.begin);
-                const end = record.end ? new Date(record.end) : null;
-                if (isNaN(begin.getTime())) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            filteredRecords = records.map(record => {
+                // Make a shallow copy so we don't mutate the original
+                const rec = { ...record };
+                const begin = new Date(rec.begin);
+                let end = rec.end ? new Date(rec.end) : null;
+                if (isNaN(begin.getTime())) return null;
+
+                // If end date is today or in the future, and filterDate is in the future, set end to filterDate
+                if (end && !isNaN(end.getTime())) {
+                    end.setHours(0, 0, 0, 0);
+                    if (end.getTime() >= today.getTime() && filterDate > today) {
+                        rec.end = filterDate.toISOString(); // Update the record's end date
+                        end = new Date(filterDate);
+                        end.setHours(0, 0, 0, 0);
+                    }
+                }
+
                 const filterYMD = formatDateForInput(filterDate);
                 const beginYMD = formatDateForInput(begin);
                 const endYMD = end && !isNaN(end.getTime()) ? formatDateForInput(end) : null;
-                if (filterYMD === beginYMD) return true;
-                if (endYMD && filterYMD === endYMD) return true;
+                if (filterYMD === beginYMD) return rec;
+                if (endYMD && filterYMD === endYMD) return rec;
                 if (end && !isNaN(end.getTime())) {
-                    return filterDate > begin && filterDate < end;
+                    if (filterDate > begin && filterDate <= end) return rec;
                 } else {
-                    return filterDate > begin;
+                    if (filterDate > begin) return rec;
                 }
-            });
+                return null;
+            }).filter(Boolean);
         }
 
         // Apply person filter if set
@@ -180,11 +197,11 @@
             if (end && !isNaN(end.getTime())) {
                 const normalizedEnd = new Date(end);
                 normalizedEnd.setHours(0, 0, 0, 0);
-                if (normalizedEnd.getTime() === today.getTime()) {
-                    isEndDateToday = true;
+                if (normalizedEnd.getTime() >= today.getTime()) { // Check if end date is today or later
+                        isEndDateToday = true;
                 }
             }
-
+            //Highlight upcoming, recent, or current birthdays and anniversaries
             if (isTargetEvent && isEndDateToday) {
                 const beginDate = new Date(record.begin);
                 if (!isNaN(beginDate.getTime())) {
