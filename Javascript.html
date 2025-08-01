@@ -161,12 +161,13 @@
 
             // --- FLEXIBLE END DATE LOGIC FOR DISPLAY ---
             const filterDateStr = $('#filterDate').val();
-            const filterDate = filterDateStr ? new Date(filterDateStr) : null;
+            const filterDate = filterDateStr ? parseLocalDate(filterDateStr) : null;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
             const begin = new Date(record.begin);
-            let end = record.end ? new Date(record.end) : null;
+            var end = record.end ? new Date(record.end) : null; // <-- changed from let/const to var
+
             if (end && !isNaN(end.getTime())) {
                 end.setHours(0, 0, 0, 0);
                 if (filterDate && filterDate > today && end.getTime() >= today.getTime()) {
@@ -209,6 +210,33 @@
             // Create clickable date cells
             const $beginDateCell = $('<td>').addClass('clickable-date').text(formatDateForDisplay(record.begin));
             const $endDateCell = $('<td>').addClass('clickable-date').text(formatDateForDisplay(end)); // Use adjusted end
+
+            // Highlight for upcoming or current anniversaries/birthdays (always relative to today)
+            const isTargetEvent = eventType === 'Alive' || eventType === 'Married';
+            if (isTargetEvent) {
+                const beginDate = new Date(record.begin);
+                if (!isNaN(beginDate.getTime())) {
+                    const beginDayOfYear = getDayOfYear(beginDate);
+                    const daysInYear = new Date(today.getFullYear(), 1, 29).getDate() === 29 ? 366 : 365;
+                    const todayDayOfYear = getDayOfYear(today);
+                    let diff = beginDayOfYear - todayDayOfYear;
+
+                    // Adjust for year-end wrap-around
+                    if (diff > daysInYear / 2) {
+                        diff -= daysInYear;
+                    } else if (diff < -daysInYear / 2) {
+                        diff += daysInYear;
+                    }
+
+                    if (diff === 0) {
+                        $beginDateCell.addClass('highlight-today'); // On the day: Neon Orange
+                    } else if (diff > 0 && diff <= 14) {
+                        $beginDateCell.addClass('highlight-upcoming'); // Upcoming within 2 weeks: Neon Green
+                    } else if (diff < 0 && diff >= -14) {
+                        $beginDateCell.addClass('highlight-recent'); // Recent within last 2 weeks: Neon Yellow
+                    }
+                }
+            }
 
             if (record.begin) {
                 $beginDateCell.on('click', function(e) {
