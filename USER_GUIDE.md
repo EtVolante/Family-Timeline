@@ -61,10 +61,22 @@ Family Timeline was originally conceived as a tool to help date old family photo
 - **Event Type** dropdown lets you filter by specific event categories
 - "All Events" option to see everything
 
-#### Person Filtering
-- Click on any person's name to filter all events for that person
-- Person column header is highlighted when a person filter is active
-- Person filter can be cleared using the "Clear" button
+
+### Person Filtering and Age Filters
+- Click on any person's name to filter all events for that person.
+- When person filtering is active:
+  - The Min Level and Max Level filters are replaced by Age (Years) and Age (Months) filters, showing the person's age as of the current Filter Date (or today if no date is set).
+  - Changing the Age (Years) or Age (Months) fields will automatically update the Filter Date to match the selected age for that person.
+  - Changing the Filter Date will automatically update the Age (Years) and Age (Months) fields to reflect the person's age on that date.
+- The Person column header is highlighted when a person filter is active.
+- To exit person filtering, use the "Clear" button.
+
+### Clear Button Behavior
+- When person filtering is active and you press the Clear button:
+  - The person filter is removed.
+  - The Min Level and Max Level filters are restored to their previous values.
+  - The Filter Date and Event Type filters are left unchanged.
+- When person filtering is not active, the Clear button resets all filters to their default values.
 
 ### Sorting Options
 - **Sort By** dropdown allows sorting by:

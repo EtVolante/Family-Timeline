@@ -118,10 +118,39 @@
         // Apply person filter if set
         if (personFilterOverride) {
             filteredRecords = filteredRecords.filter(record => record.person === personFilterOverride);
-            // Optionally, visually indicate the filter is active (e.g., change table header)
             $('#eventTable thead th:first').text('Person (filtered: ' + personFilterOverride + ')');
+
+            // Hide min/max level controls, show age controls
+            $('#minLevel, #minLevelLabel').hide();
+            $('#maxLevel, #maxLevelLabel').hide();
+            $('#ageYears, #ageYearsLabel').show();
+            $('#ageMonths, #ageMonthsLabel').show();
+
+            // Always set age fields based on alive record and current filter date (or today)
+            const aliveRecord = records.find(r => r.person === personFilterOverride && (r.event || '').trim() === 'Alive');
+            let ageYears = '', ageMonths = '';
+            if (aliveRecord) {
+                const begin = new Date(aliveRecord.begin);
+                const filterDateStr = $('#filterDate').val();
+                const filterDate = filterDateStr ? parseLocalDate(filterDateStr) : new Date();
+                let years = filterDate.getFullYear() - begin.getFullYear();
+                let months = filterDate.getMonth() - begin.getMonth();
+                let days = filterDate.getDate() - begin.getDate();
+                if (days < 0) months--;
+                if (months < 0) { years--; months += 12; }
+                if (years < 0) { years = 0; months = 0; }
+                ageYears = years;
+                ageMonths = months;
+            }
+            $('#ageYears').val(ageYears);
+            $('#ageMonths').val(ageMonths);
         } else {
             $('#eventTable thead th:first').text('Person');
+            // Show min/max level controls, hide age controls
+            $('#minLevel, #minLevelLabel').show();
+            $('#maxLevel, #maxLevelLabel').show();
+            $('#ageYears, #ageYearsLabel').hide();
+            $('#ageMonths, #ageMonthsLabel').hide();
         }
 
         // Sort filteredRecords based on sortBy dropdown
@@ -428,16 +457,52 @@
         const $filterDate = $('#filterDate');
         const $eventType = $('#eventType');
         const $sortBy = $('#sortBy');
+
+        // Store current min/max level values before clearing
+        const prevMinLevel = localStorage.getItem('timelinePrevMinLevel') || $minLevel.val() || '1';
+        const prevMaxLevel = localStorage.getItem('timelinePrevMaxLevel') || $maxLevel.val() || '15';
+
+        // If person filter is on, clear only the person filter and restore min/max levels, but do NOT reset filter date or event type
+        if (personFilterOverride) {
+            personFilterOverride = null;
+
+            // Restore min/max level controls and their values
+            $('#minLevel, #minLevelLabel').show();
+            $('#maxLevel, #maxLevelLabel').show();
+            $('#ageYears, #ageYearsLabel').hide();
+            $('#ageMonths, #ageMonthsLabel').hide();
+
+            $minLevel.val(prevMinLevel);
+            $maxLevel.val(prevMaxLevel);
+            updateMaxLevelOptions(prevMinLevel);
+
+            // Do NOT reset filterDate or eventType
+            saveFiltersToLocalStorage();
+            renderTable(currentRecords);
+            return;
+        }
+
+        // Otherwise, clear all filters as usual
         $minLevel.val('1');
         $maxLevel.val('15');
-        // Re-enable all options in the max level dropdown
         updateMaxLevelOptions(1);
         $filterDate.val('');
         $eventType.val('');
         $sortBy.val('begin');
-        personFilterOverride = null; // Clear person filter as well
+        personFilterOverride = null;
         saveFiltersToLocalStorage();
         renderTable(currentRecords);
+    });
+
+    // Store min/max level values whenever they change
+    $(document).on('change', '#minLevel, #maxLevel', function() {
+        localStorage.setItem('timelinePrevMinLevel', $('#minLevel').val());
+        localStorage.setItem('timelinePrevMaxLevel', $('#maxLevel').val());
+        if (personFilterOverride) {
+            personFilterOverride = null;
+        }
+        renderTable(currentRecords);
+        saveFiltersToLocalStorage();
     });
 
     function fetchAndUpdateRecords(isInitialLoad = false) {
@@ -496,6 +561,79 @@
         } else {
             console.error('Failed to initialize DOM elements');
             showMessage('Failed to initialize the application. Please refresh the page.', 'error');
+        }
+    });
+
+    $(document).on('change', '#minLevel, #maxLevel', function() {
+        if (personFilterOverride) {
+            personFilterOverride = null;
+        }
+        renderTable(currentRecords);
+        saveFiltersToLocalStorage();
+    });
+
+    $(document).on('change', '#filterDate', function() {
+        saveFiltersToLocalStorage();
+
+        if (personFilterOverride) {
+            // Always recalculate age fields based on alive record and new filter date
+            const aliveRecord = currentRecords.find(r => r.person === personFilterOverride && (r.event || '').trim() === 'Alive');
+            if (aliveRecord) {
+                const begin = new Date(aliveRecord.begin);
+                const filterDateStr = $('#filterDate').val();
+                const filterDate = filterDateStr ? parseLocalDate(filterDateStr) : new Date();
+                let years = filterDate.getFullYear() - begin.getFullYear();
+                let months = filterDate.getMonth() - begin.getMonth();
+                let days = filterDate.getDate() - begin.getDate();
+                if (days < 0) months--;
+                if (months < 0) { years--; months += 12; }
+                if (years < 0) { years = 0; months = 0; }
+                $('#ageYears').val(years);
+                $('#ageMonths').val(months);
+            } else {
+                // If no alive record, clear the age fields
+                $('#ageYears').val('');
+                $('#ageMonths').val('');
+            }
+        }
+
+        renderTable(currentRecords);
+    });
+
+    // When age filters change, update filterDate based on alive record
+    $(document).on('change', '#ageYears, #ageMonths', function() {
+        if (personFilterOverride) {
+            const aliveRecord = currentRecords.find(r => r.person === personFilterOverride && (r.event || '').trim() === 'Alive');
+            if (aliveRecord) {
+                const begin = new Date(aliveRecord.begin);
+                let years = parseInt($('#ageYears').val(), 10) || 0;
+                let months = parseInt($('#ageMonths').val(), 10) || 0;
+                let newDate = new Date(begin.getFullYear(), begin.getMonth() + months, begin.getDate(), 0, 0, 0, 0);
+                newDate.setFullYear(begin.getFullYear() + years);
+                $('#filterDate').val(formatDateForInput(newDate));
+                saveFiltersToLocalStorage();
+                renderTable(currentRecords);
+            }
+        }
+    });
+
+    // When filterDate changes, update age filters based on alive record
+    $(document).on('change', '#filterDate', function() {
+        if (personFilterOverride && $('#ageYears').length) {
+            const aliveRecord = currentRecords.find(r => r.person === personFilterOverride && (r.event || '').trim() === 'Alive');
+            if (aliveRecord) {
+                const begin = new Date(aliveRecord.begin);
+                const filterDateStr = $('#filterDate').val();
+                const filterDate = filterDateStr ? parseLocalDate(filterDateStr) : new Date();
+                let years = filterDate.getFullYear() - begin.getFullYear();
+                let months = filterDate.getMonth() - begin.getMonth();
+                let days = filterDate.getDate() - begin.getDate();
+                if (days < 0) months--;
+                if (months < 0) { years--; months += 12; }
+                if (years < 0) { years = 0; months = 0; }
+                $('#ageYears').val(years);
+                $('#ageMonths').val(months);
+            }
         }
     });
 </script>

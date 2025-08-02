@@ -12,17 +12,21 @@
 </head>
 <body>
     <div class="container">
-        <h3 style="margin-bottom: 0.5em;">Family Timeline <span style="font-size:small;">v4.5.3</span></h3>
+        <h3 style="margin-bottom: 0.5em;">Family Timeline <span style="font-size:small;">v4.6.8</span></h3>
 
         <!-- Level and Date Filter UI -->
         <div class="row" id="filterCriteriaContainer" style="margin-bottom: 1.5em;">
             <div class="two columns">
-                <label for="minLevel">Min Level</label>
+                <label for="minLevel" id="minLevelLabel">Min Level</label>
                 <select id="minLevel" class="u-full-width"></select>
+                <label for="ageYears" id="ageYearsLabel" style="display:none;">Age (Years)</label>
+                <input type="number" id="ageYears" min="0" class="u-full-width" style="display:none;">
             </div>
             <div class="two columns">
-                <label for="maxLevel">Max Level</label>
+                <label for="maxLevel" id="maxLevelLabel">Max Level</label>
                 <select id="maxLevel" class="u-full-width"></select>
+                <label for="ageMonths" id="ageMonthsLabel" style="display:none;">(Months)</label>
+                <input type="number" id="ageMonths" min="0" max="11" class="u-full-width" style="display:none;">
             </div>
             <div class="two columns">
                 <label for="filterDate">Filter Date</label>
