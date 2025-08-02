@@ -9,20 +9,21 @@ var SHEET_NAME = "Data";  // Sheet name for event data
  * Ensure the HTML file is named 'Index.html' in your Apps Script project.
  */
 function doGet(e) {
-  if (e.parameter.file === 'service-worker.js') {
-    return ContentService.createTextOutput(
-      HtmlService.createHtmlOutputFromFile('service-worker.js').getContent()
-    ).setMimeType(ContentService.MimeType.JAVASCRIPT);
+  switch (e.parameter.file) {
+    case 'service-worker.html':
+      return ContentService.createTextOutput(
+        HtmlService.createHtmlOutputFromFile('service-worker.html').getContent()
+      ).setMimeType(ContentService.MimeType.JAVASCRIPT);
+    case 'manifest.html':
+      return ContentService.createTextOutput(
+        HtmlService.createHtmlOutputFromFile('manifest.html').getContent()
+      ).setMimeType(ContentService.MimeType.JSON);
+    default:
+      return HtmlService.createTemplateFromFile('Index.html')
+        .evaluate()
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
+        .setTitle('Family Timeline Information');
   }
-  if (e.parameter.file === 'manifest.json') {
-    return ContentService.createTextOutput(
-      HtmlService.createHtmlOutputFromFile('manifest.json').getContent()
-    ).setMimeType(ContentService.MimeType.JSON);
-  }
-  return HtmlService.createTemplateFromFile('Index.html')
-    .evaluate()
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
-    .setTitle('Family Timeline Information');
 }
 
 // Function to include html files in main page

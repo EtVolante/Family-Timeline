@@ -10,11 +10,14 @@
     <!-- Custom Stylesheet -->
     <?!= include('Stylesheet'); ?>
 
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="?file=manifest.html">
     <script>
       if ('serviceWorker' in navigator) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('file', 'service-worker.html');
+
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/service-worker.js').then(registration => {
+          navigator.serviceWorker.register(url).then(registration => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
           }, err => {
             console.log('ServiceWorker registration failed: ', err);
@@ -25,7 +28,7 @@
 </head>
 <body>
     <div class="container">
-        <h3 style="margin-bottom: 0.5em;">Family Timeline <span style="font-size:small;">v5.0.1</span></h3>
+        <h3 style="margin-bottom: 0.5em;">Family Timeline <span style="font-size:small;">v5.0.6</span></h3>
 
         <!-- Level and Date Filter UI -->
         <div class="row" id="filterCriteriaContainer" style="margin-bottom: 1.5em;">
