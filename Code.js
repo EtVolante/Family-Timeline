@@ -8,7 +8,17 @@ var SHEET_NAME = "Data";  // Sheet name for event data
  * Serves the HTML file for the web app.
  * Ensure the HTML file is named 'Index.html' in your Apps Script project.
  */
-function doGet() {
+function doGet(e) {
+  if (e.parameter.file === 'service-worker.js') {
+    return ContentService.createTextOutput(
+      HtmlService.createHtmlOutputFromFile('service-worker.js').getContent()
+    ).setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+  if (e.parameter.file === 'manifest.json') {
+    return ContentService.createTextOutput(
+      HtmlService.createHtmlOutputFromFile('manifest.json').getContent()
+    ).setMimeType(ContentService.MimeType.JSON);
+  }
   return HtmlService.createTemplateFromFile('Index.html')
     .evaluate()
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
