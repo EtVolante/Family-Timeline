@@ -245,12 +245,16 @@
             if (isTargetEvent) {
                 const beginDate = new Date(record.begin);
                 if (!isNaN(beginDate.getTime())) {
-                    const beginDayOfYear = getDayOfYear(beginDate);
-                    const daysInYear = new Date(today.getFullYear(), 1, 29).getDate() === 29 ? 366 : 365;
-                    const todayDayOfYear = getDayOfYear(today);
-                    let diff = beginDayOfYear - todayDayOfYear;
+                    // Create an anniversary date in the *current* year to compare apples-to-apples
+                    const anniversaryDate = new Date(beginDate);
+                    anniversaryDate.setFullYear(today.getFullYear());
 
-                    // Adjust for year-end wrap-around
+                    const anniversaryDayOfYear = getDayOfYear(anniversaryDate);
+                    const daysInYear = new Date(today.getFullYear(), 1, 29).getDate() === 29 ? 366 : 365;
+                    
+                    let diff = anniversaryDayOfYear - todayDayOfYear;
+
+                    // Adjust for year-end wrap-around. E.g. if today is Dec 31 and anniversary is Jan 1.
                     if (diff > daysInYear / 2) {
                         diff -= daysInYear;
                     } else if (diff < -daysInYear / 2) {
@@ -513,16 +517,6 @@
 
         google.script.run
             .withSuccessHandler(records => {
-                // Augment records: If an 'end' date is blank, set it to today's date.
-                // This ensures that all records have an end date for filtering and display logic.
-                const todayISO = new Date().toISOString();
-                records.forEach(record => {
-                    // The property name 'end' corresponds to the 'End' column header in the spreadsheet.
-                    if (!record.end) {
-                        record.end = todayISO;
-                    }
-                });
-
                 // Always update the local storage cache for the next visit.
                 localStorage.setItem('timelineRecords', JSON.stringify(records));
 

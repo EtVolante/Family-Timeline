@@ -10,10 +10,6 @@ var SHEET_NAME = "Data";  // Sheet name for event data
  */
 function doGet(e) {
   switch (e.parameter.file) {
-    case 'service-worker.html':
-      return ContentService.createTextOutput(
-        HtmlService.createHtmlOutputFromFile('service-worker.html').getContent()
-      ).setMimeType(ContentService.MimeType.JAVASCRIPT);
     case 'manifest.html':
       return ContentService.createTextOutput(
         HtmlService.createHtmlOutputFromFile('manifest.html').getContent()
