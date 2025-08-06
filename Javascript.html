@@ -1,8 +1,10 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     // Use google.script.run for communicating with Apps Script backend
     let currentRecords = [];
     let personFilterOverride = null; // Used to filter by a single person, overriding other filters
+    let flatpickrInstance = null;
     // DOM element references using jQuery
     let $eventTableBody, $loadingIndicator, $messageBox, $noRecordsMessage;
 
@@ -195,27 +197,33 @@
             today.setHours(0, 0, 0, 0);
 
             const begin = new Date(record.begin);
-            var end = record.end ? new Date(record.end) : null; // <-- changed from let/const to var
+            const end = record.end ? new Date(record.end) : null; // Original end date from record
+            let endForDisplay = end; // This will be the date used for display and age calculation
 
-            if (end && !isNaN(end.getTime())) {
-                end.setHours(0, 0, 0, 0);
-                if (filterDate && filterDate > today && end.getTime() >= today.getTime()) {
-                    end = new Date(filterDate);
-                    end.setHours(0, 0, 0, 0);
+            // If the original end date is blank (ongoing event), determine what to show.
+            if (!end || isNaN(end.getTime())) {
+                // If the filter date is set and is in the future, use it.
+                if (filterDate && filterDate > today) {
+                    endForDisplay = new Date(filterDate);
+                } else {
+                    // Otherwise, default to today.
+                    endForDisplay = new Date(today);
                 }
             }
 
             if (eventType === 'Alive') {
+                // A real end date that is in the past means deceased.
                 if (end && !isNaN(end.getTime()) && end < today) {
                     $row.addClass('deceased-row');
                 } else {
                     $row.addClass('alive-row');
                 }
 
-                if (!isNaN(begin.getTime()) && end && !isNaN(end.getTime())) {
-                    let years = end.getFullYear() - begin.getFullYear();
-                    let months = end.getMonth() - begin.getMonth();
-                    let days = end.getDate() - begin.getDate();
+                // Calculate age based on the potentially modified display end date.
+                if (!isNaN(begin.getTime())) {
+                    let years = endForDisplay.getFullYear() - begin.getFullYear();
+                    let months = endForDisplay.getMonth() - begin.getMonth();
+                    let days = endForDisplay.getDate() - begin.getDate();
                     if (days < 0) months--;
                     if (months < 0) { years--; months += 12; }
                     if (years < 0) { years = 0; months = 0; }
@@ -236,9 +244,9 @@
                     renderTable(currentRecords);
                 });
 
-            // Create clickable date cells
+            // Create clickable date cells. Display the original end date from the record.
             const $beginDateCell = $('<td>').addClass('clickable-date').text(formatDateForDisplay(record.begin));
-            const $endDateCell = $('<td>').addClass('clickable-date').text(formatDateForDisplay(end)); // Use adjusted end
+            const $endDateCell = $('<td>').addClass('clickable-date').text(formatDateForDisplay(endForDisplay));
 
             // Highlight for upcoming or current anniversaries/birthdays (always relative to today)
             const isTargetEvent = eventType === 'Alive' || eventType === 'Married';
@@ -274,17 +282,20 @@
             if (record.begin) {
                 $beginDateCell.on('click', function(e) {
                     e.stopPropagation();
-                    $('#filterDate').val(formatDateForInput(record.begin));
-                    saveFiltersToLocalStorage();
-                    renderTable(currentRecords);
+                    const newDate = formatDateForInput(record.begin);
+                    if (flatpickrInstance) {
+                        flatpickrInstance.setDate(newDate, true); // Pass true to trigger onChange
+                    }
                 });
             }
-            if (end) {
+            // Make the displayed end date clickable, even if it's dynamically generated.
+            if (endForDisplay) {
                 $endDateCell.on('click', function(e) {
                     e.stopPropagation();
-                    $('#filterDate').val(formatDateForInput(end));
-                    saveFiltersToLocalStorage();
-                    renderTable(currentRecords);
+                    const newDate = formatDateForInput(endForDisplay);
+                    if (flatpickrInstance) {
+                        flatpickrInstance.setDate(newDate, true); // Pass true to trigger onChange
+                    }
                 });
             }
 
@@ -335,7 +346,13 @@
         const filters = JSON.parse(localStorage.getItem('timelineFilters') || '{}');
         if (filters.minLevel) $('#minLevel').val(filters.minLevel);
         if (filters.maxLevel) $('#maxLevel').val(filters.maxLevel);
-        if (filters.filterDate) $('#filterDate').val(filters.filterDate);
+        if (filters.filterDate) {
+            // Set the date in flatpickr, which will trigger its own onChange event
+            flatpickrInstance.setDate(filters.filterDate, false); // `false` to not trigger change on load
+        } else {
+            // If no date in storage, ensure flatpickr is also clear
+            flatpickrInstance.clear(false);
+        }
         if (filters.eventType) $('#eventType').val(filters.eventType);
         if (filters.sortBy) $('#sortBy').val(filters.sortBy);
     }
@@ -411,7 +428,7 @@
         // Restore the previously selected value
         $eventType.val(selectedValue);
     }
-    $(document).on('change', '#minLevel, #maxLevel, #filterDate, #eventType, #sortBy', function() {
+    $(document).on('change', '#minLevel, #maxLevel, #eventType, #sortBy', function() {
         // When Min Level changes, update Max Level options and value
         if ($(this).is('#minLevel')) {
             const minLevel = $(this).val();
@@ -433,7 +450,7 @@
     });
 
     // Keep the existing handler for other filters
-    $(document).on('change', '#filterDate, #eventType, #sortBy', function() {
+    $(document).on('change', '#eventType, #sortBy', function() {
         renderTable(currentRecords);
         saveFiltersToLocalStorage();
     });
@@ -458,7 +475,6 @@
     $(document).on('click', '#clearFilters', function() {
         const $minLevel = $('#minLevel');
         const $maxLevel = $('#maxLevel');
-        const $filterDate = $('#filterDate');
         const $eventType = $('#eventType');
         const $sortBy = $('#sortBy');
 
@@ -490,7 +506,9 @@
         $minLevel.val('1');
         $maxLevel.val('15');
         updateMaxLevelOptions(1);
-        $filterDate.val('');
+        if (flatpickrInstance) {
+            flatpickrInstance.clear(true); // Pass true to trigger onChange
+        }
         $eventType.val('');
         $sortBy.val('begin');
         personFilterOverride = null;
@@ -517,6 +535,9 @@
 
         google.script.run
             .withSuccessHandler(records => {
+                // Store the original, unmodified records.
+                currentRecords = records;
+
                 // Always update the local storage cache for the next visit.
                 localStorage.setItem('timelineRecords', JSON.stringify(records));
 
@@ -537,6 +558,18 @@
     }
     $(document).ready(function() {
         if (initializeDOMElements()) {
+            // Initialize flatpickr and store the instance
+            flatpickrInstance = flatpickr("#filterDate", {
+                altInput: true,
+                altFormat: "F j, Y",
+                dateFormat: "Y-m-d",
+                onChange: function(selectedDates, dateStr, instance) {
+                    // This is the primary trigger for date-based filtering.
+                    saveFiltersToLocalStorage();
+                    renderTable(currentRecords);
+                }
+            });
+
             // 1. Populate static dropdowns that don't depend on data.
             populateLevelDropdowns();
 
@@ -604,9 +637,9 @@
                 let months = parseInt($('#ageMonths').val(), 10) || 0;
                 let newDate = new Date(begin.getFullYear(), begin.getMonth() + months, begin.getDate(), 0, 0, 0, 0);
                 newDate.setFullYear(begin.getFullYear() + years);
-                $('#filterDate').val(formatDateForInput(newDate));
-                saveFiltersToLocalStorage();
-                renderTable(currentRecords);
+                if (flatpickrInstance) {
+                    flatpickrInstance.setDate(newDate, true);
+                }
             }
         }
     });

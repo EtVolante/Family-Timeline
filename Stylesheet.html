@@ -161,6 +161,22 @@
         color: #b57f00;
         font-weight: bold;
     }
+
+    /* Custom styles for form elements */
+    select,
+    input[type="number"],
+    input[type="date"].flatpickr-input {
+        height: 48px; /* Taller for easier tapping */
+        padding: 10px 15px;
+        font-size: 1.1em; /* Larger font */
+        border: 1px solid #D1D1D1;
+        border-radius: 4px;
+        background-color: #fff;
+        -webkit-appearance: none; /* Remove default mobile styling */
+        -moz-appearance: none;
+        appearance: none;
+    }
+
     @media (max-width: 600px) {
         html, body {
             font-size: 17px;
