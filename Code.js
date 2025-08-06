@@ -14,6 +14,10 @@ function doGet(e) {
       return ContentService.createTextOutput(
         HtmlService.createHtmlOutputFromFile('manifest.html').getContent()
       ).setMimeType(ContentService.MimeType.JSON);
+    case 'service-worker.html':
+      return ContentService.createTextOutput(
+        HtmlService.createHtmlOutputFromFile('manifest.html').getContent()
+      ).setMimeType(ContentService.MimeType.JAVASCRIPT);
     default:
       return HtmlService.createTemplateFromFile('Index.html')
         .evaluate()
