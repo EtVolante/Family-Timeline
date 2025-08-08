@@ -8,8 +8,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.css">
     <!-- Skeleton CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/skeleton/2.0.4/skeleton.min.css">
-    <!-- flatpickr CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <!-- Custom Stylesheet -->
     <?!= include('Stylesheet'); ?>
 
@@ -25,7 +23,15 @@
 </head>
 <body>
     <div class="container">
-        <h3 style="margin-bottom: 0.5em;">Family Timeline <span style="font-size:small;">v5.3.1</span></h3>
+        <div class="row">
+            <div class="six columns">
+                <h5 id="timelineHeader" style="margin-bottom: 0.5em;">Family Timeline</h5> 
+            </div>
+            <div class="six columns">
+                <span id="version">v 5.4.1</span> 
+                <span id="headerDate"></span>
+            </div>
+        </div>
 
         <!-- Level and Date Filter UI -->
         <div class="row" id="filterCriteriaContainer" style="margin-bottom: 1.5em;">
@@ -33,7 +39,7 @@
                 <label for="minLevel" id="minLevelLabel">Min Level</label>
                 <select id="minLevel" class="u-full-width"></select>
                 <label for="ageYears" id="ageYearsLabel" style="display:none;">Age (Years)</label>
-                <input type="number" id="ageYears" min="0" class="u-full-width" style="display:none;">
+                <input type="number" id="ageYears" min="0" max="120" class="u-full-width" style="display:none;">
             </div>
             <div class="two columns">
                 <label for="maxLevel" id="maxLevelLabel">Max Level</label>
@@ -43,7 +49,7 @@
             </div>
             <div class="two columns">
                 <label for="filterDate">Filter Date</label>
-                <input type="date" id="filterDate" class="u-full-width" style="height: 38px; padding: 6px 10px; border: 1px solid #D1D1D1; border-radius: 4px;">
+                <input type="date" id="filterDate" class="u-full-width">
             </div>
             <div class="two columns">
                 <label for="eventType">Event Type</label>

@@ -165,7 +165,7 @@
     /* Custom styles for form elements */
     select,
     input[type="number"],
-    input[type="date"].flatpickr-input {
+    input[type="date"] {
         height: 48px; /* Taller for easier tapping */
         padding: 10px 15px;
         font-size: 1.1em; /* Larger font */
@@ -175,6 +175,14 @@
         -webkit-appearance: none; /* Remove default mobile styling */
         -moz-appearance: none;
         appearance: none;
+        box-sizing: border-box;
+    }
+
+    #filterCriteriaContainer .button-primary {
+        height: 48px;
+        box-sizing: border-box;
+        font-size: 1.1em;
+        padding: 10px 15px;
     }
 
     @media (max-width: 600px) {

@@ -1,19 +1,16 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
     // Use google.script.run for communicating with Apps Script backend
     let currentRecords = [];
     let personFilterOverride = null; // Used to filter by a single person, overriding other filters
-    let flatpickrInstance = null;
-    // DOM element references using jQuery
-    let $eventTableBody, $loadingIndicator, $messageBox, $noRecordsMessage;
 
     function initializeDOMElements() {
         $eventTableBody = $('#eventTable tbody');
         $loadingIndicator = $('#loadingIndicator');
         $messageBox = $('#messageBox');
         $noRecordsMessage = $('#noRecords');
-        const requiredElements = [$eventTableBody, $loadingIndicator, $messageBox, $noRecordsMessage];
+        $timelineHeader = $('#timelineHeader');
+        const requiredElements = [$eventTableBody, $loadingIndicator, $messageBox, $noRecordsMessage, $timelineHeader];
         const missingElements = requiredElements.filter($el => $el.length === 0);
         if (missingElements.length > 0) {
             console.error('Some DOM elements could not be found:', missingElements);
@@ -64,6 +61,22 @@
         const month = parseInt(parts[1], 10) - 1;
         const day = parseInt(parts[2], 10);
         return new Date(year, month, day, 0, 0, 0, 0);
+    }
+    function updateHeaderDate(date) {
+        const $headerDate = $('#headerDate');
+        if (!$headerDate.length) return;
+
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        let displayDate = date;
+        if (!displayDate) {
+            $headerDate.text(''); // Clear the date text if no date is provided
+            return;
+        }
+
+        const month = months[displayDate.getMonth()];
+        const day = displayDate.getDate();
+        const year = displayDate.getFullYear();
+        $headerDate.text(`as of ${month} ${day}, ${year}`);
     }
     function renderTable(records) {
         $eventTableBody.empty();
@@ -283,9 +296,7 @@
                 $beginDateCell.on('click', function(e) {
                     e.stopPropagation();
                     const newDate = formatDateForInput(record.begin);
-                    if (flatpickrInstance) {
-                        flatpickrInstance.setDate(newDate, true); // Pass true to trigger onChange
-                    }
+                    $('#filterDate').val(newDate).trigger('change');
                 });
             }
             // Make the displayed end date clickable, even if it's dynamically generated.
@@ -293,9 +304,7 @@
                 $endDateCell.on('click', function(e) {
                     e.stopPropagation();
                     const newDate = formatDateForInput(endForDisplay);
-                    if (flatpickrInstance) {
-                        flatpickrInstance.setDate(newDate, true); // Pass true to trigger onChange
-                    }
+                    $('#filterDate').val(newDate).trigger('change');
                 });
             }
 
@@ -347,11 +356,9 @@
         if (filters.minLevel) $('#minLevel').val(filters.minLevel);
         if (filters.maxLevel) $('#maxLevel').val(filters.maxLevel);
         if (filters.filterDate) {
-            // Set the date in flatpickr, which will trigger its own onChange event
-            flatpickrInstance.setDate(filters.filterDate, false); // `false` to not trigger change on load
+            $('#filterDate').val(filters.filterDate);
         } else {
-            // If no date in storage, ensure flatpickr is also clear
-            flatpickrInstance.clear(false);
+            $('#filterDate').val('');
         }
         if (filters.eventType) $('#eventType').val(filters.eventType);
         if (filters.sortBy) $('#sortBy').val(filters.sortBy);
@@ -475,6 +482,7 @@
     $(document).on('click', '#clearFilters', function() {
         const $minLevel = $('#minLevel');
         const $maxLevel = $('#maxLevel');
+        const $filterDate = $('#filterDate');
         const $eventType = $('#eventType');
         const $sortBy = $('#sortBy');
 
@@ -506,15 +514,15 @@
         $minLevel.val('1');
         $maxLevel.val('15');
         updateMaxLevelOptions(1);
-        if (flatpickrInstance) {
-            flatpickrInstance.clear(true); // Pass true to trigger onChange
-        }
+        $('#filterDate').val('');
         $eventType.val('');
         $sortBy.val('begin');
         personFilterOverride = null;
         saveFiltersToLocalStorage();
         renderTable(currentRecords);
+        updateHeaderDate(null); // Clear header date
     });
+    
 
     // Store min/max level values whenever they change
     $(document).on('change', '#minLevel, #maxLevel', function() {
@@ -558,18 +566,6 @@
     }
     $(document).ready(function() {
         if (initializeDOMElements()) {
-            // Initialize flatpickr and store the instance
-            flatpickrInstance = flatpickr("#filterDate", {
-                altInput: true,
-                altFormat: "F j, Y",
-                dateFormat: "Y-m-d",
-                onChange: function(selectedDates, dateStr, instance) {
-                    // This is the primary trigger for date-based filtering.
-                    saveFiltersToLocalStorage();
-                    renderTable(currentRecords);
-                }
-            });
-
             // 1. Populate static dropdowns that don't depend on data.
             populateLevelDropdowns();
 
@@ -585,6 +581,9 @@
 
             // 3. In the background, fetch the latest level labels to update the cache.
             fetchAndUpdateLevelLabels();
+
+            // Set initial header date
+            updateHeaderDate(parseLocalDate($('#filterDate').val()));
         } else {
             console.error('Failed to initialize DOM elements');
             showMessage('Failed to initialize the application. Please refresh the page.', 'error');
@@ -601,6 +600,7 @@
 
     $(document).on('change', '#filterDate', function() {
         saveFiltersToLocalStorage();
+        updateHeaderDate(parseLocalDate($('#filterDate').val()));
 
         if (personFilterOverride) {
             // Always recalculate age fields based on alive record and new filter date
@@ -637,9 +637,10 @@
                 let months = parseInt($('#ageMonths').val(), 10) || 0;
                 let newDate = new Date(begin.getFullYear(), begin.getMonth() + months, begin.getDate(), 0, 0, 0, 0);
                 newDate.setFullYear(begin.getFullYear() + years);
-                if (flatpickrInstance) {
-                    flatpickrInstance.setDate(newDate, true);
-                }
+                $('#filterDate').val(formatDateForInput(newDate));
+                saveFiltersToLocalStorage();
+                renderTable(currentRecords);
+                updateHeaderDate(newDate);
             }
         }
     });
@@ -664,3 +665,5 @@
         }
     });
 </script>
+
+
