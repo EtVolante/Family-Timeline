@@ -69,14 +69,14 @@
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         let displayDate = date;
         if (!displayDate) {
-            $headerDate.text(''); // Clear the date text if no date is provided
+            $headerDate.text('Filter Date'); // Clear the date text if no date is provided
             return;
         }
 
         const month = months[displayDate.getMonth()];
         const day = displayDate.getDate();
         const year = displayDate.getFullYear();
-        $headerDate.text(`as of ${month} ${day}, ${year}`);
+        $headerDate.text(`${month} ${day}, ${year}`);
     }
     function renderTable(records) {
         $eventTableBody.empty();

@@ -22,17 +22,12 @@
     </script>
 </head>
 <body>
-    <div class="container">
+        <div class="container">
         <div class="row">
-            <div class="six columns">
-                <h5 id="timelineHeader" style="margin-bottom: 0.5em;">Family Timeline</h5> 
-            </div>
-            <div class="six columns">
-                <span id="version">v 5.4.1</span> 
-                <span id="headerDate"></span>
+            <div class="twelve columns">
+                <h5 id="timelineHeader" style="margin-bottom: 0.5em;">Family Timeline <span id="version" style="font-size:medium;"> v 5.4.4</span></h5>
             </div>
         </div>
-
         <!-- Level and Date Filter UI -->
         <div class="row" id="filterCriteriaContainer" style="margin-bottom: 1.5em;">
             <div class="two columns">
@@ -48,7 +43,7 @@
                 <input type="number" id="ageMonths" min="0" max="11" class="u-full-width" style="display:none;">
             </div>
             <div class="two columns">
-                <label for="filterDate">Filter Date</label>
+                <label for="filterDate" id="filterDateLabel"><span id="headerDate"></span></label>
                 <input type="date" id="filterDate" class="u-full-width">
             </div>
             <div class="two columns">
@@ -66,7 +61,7 @@
             </div>
             <div class="two columns">
                 <label for="clearFilters">&nbsp;</label> <!-- Added for vertical alignment -->
-                <button type="button" id="clearFilters" class="button-primary u-full-width">Clear</button>
+                <button type="button" id="clearFilters" class="button-primary">Clear</button>
             </div>
         </div>
 
