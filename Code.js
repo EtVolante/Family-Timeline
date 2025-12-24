@@ -1,14 +1,25 @@
-// Howard Lenos - Family Timeline - Code.js v 1.0
+// Howard Lenos - Family Timeline - Code.js v 2.0
 
 // Global variables 
 var SPREADSHEET_ID = "1AlDyWzRB9eAXzwOwXr3g8rAqLKGgLv_5Tr0JCHtP2AQ";    // Family Timeline Data Spreadsheet ID
-var SHEET_NAME = "Data";  // Sheet name for event data
+var SHEET_NAME_EVENTS = "Data";  // Sheet name for event data
+var SHEET_NAME_PEOPLE = "People"; // Sheet name for people data
 
 /**
- * Serves the HTML file for the web app.
- * Ensure the HTML file is named 'Index.html' in your Apps Script project.
+ * Serves the HTML file for the web app or JSON data.
  */
 function doGet(e) {
+  // If 'format=json' is passed, return Data as JSON
+  if (e.parameter.format === 'json') {
+    const data = {
+      events: getSheetData(SHEET_NAME_EVENTS),
+      people: getSheetData(SHEET_NAME_PEOPLE)
+    };
+    return ContentService.createTextOutput(JSON.stringify(data))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Otherwise serve the HTML app
   switch (e.parameter.file) {
     case 'manifest.html':
       return ContentService.createTextOutput(
@@ -26,88 +37,97 @@ function doGet(e) {
   }
 }
 
-// Function to include html files in main page
-function include(filename) {
-    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+/**
+ * Handles POST requests to add data.
+ */
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action;
+    const payload = data.payload;
+
+    let result = {};
+
+    if (action === 'addPerson') {
+      result = addRecord(SHEET_NAME_PEOPLE, payload);
+    } else if (action === 'addEvent') {
+      result = addRecord(SHEET_NAME_EVENTS, payload);
+    } else {
+      throw new Error('Invalid action');
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'success', data: result }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: error.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
+// Function to include html files in main page
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
 
 /**
- * Gets all data from the 'Data' sheet.
- * Assumes the first row contains headers.
- * @returns {Array<Object>} An array of objects, where each object represents a row.
+ * Generic function to get all data from a sheet.
  */
-function getData() {
+function getSheetData(sheetName) {
   try {
     const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const sheet = spreadsheet.getSheetByName(SHEET_NAME);
-    if (!sheet) {
-      throw new Error(`Sheet "${SHEET_NAME}" not found in spreadsheet with ID "${SPREADSHEET_ID}".`);
-    }
+    const sheet = spreadsheet.getSheetByName(sheetName);
+    if (!sheet) return [];
 
     const range = sheet.getDataRange();
     const values = range.getValues();
 
-    if (values.length === 0) {
-      return []; // No data in the sheet
-    }
+    if (values.length === 0) return [];
 
-    const headers = values[0]; // First row assumed to be headers
+    const headers = values[0];
     const records = [];
 
-    for (let i = 1; i < values.length; i++) { // Start from the second row for data
+    for (let i = 1; i < values.length; i++) {
       const row = values[i];
       const record = {};
       headers.forEach((header, index) => {
-        // Trim whitespace from header names and convert to camelCase for cleaner JS object keys
-        const formattedHeader = header.trim().replace(/[^a-zA-Z0-9]+(.)?/g, (match, chr) => chr ? chr.toUpperCase() : '').replace(/^./, str => str.toLowerCase());
+        // camelCase the header
+        const key = header.trim().replace(/[^a-zA-Z0-9]+(.)?/g, (match, chr) => chr ? chr.toUpperCase() : '').replace(/^./, str => str.toLowerCase());
         let cellValue = row[index];
         if (cellValue instanceof Date) {
-          cellValue = cellValue.toISOString();
+          cellValue = cellValue.toISOString().split('T')[0]; // Store as YYYY-MM-DD
         }
-        record[formattedHeader] = cellValue;
+        record[key] = cellValue;
       });
       records.push(record);
     }
     return records;
   } catch (e) {
-    // Log the error for debugging in Apps Script logs
-    Logger.log("Error in getData: " + e.message);
-    // Re-throw or return a user-friendly error message to the client
-    throw new Error("Failed to retrieve data: " + e.message);
+    Logger.log("Error in getSheetData: " + e.message);
+    return [];
   }
 }
 
 /**
- * Gets level labels from the 'level_labels' named range.
- * @returns {Array<Object>} An array of objects with level and label properties.
+ * Adds a new record to a sheet.
  */
-function getLevelLabels() {
-  try {
-    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
-    const range = spreadsheet.getRangeByName('level_labels');
-    if (!range) {
-      throw new Error('Named range "level_labels" not found in spreadsheet.');
-    }
+function addRecord(sheetName, record) {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(sheetName);
 
-    const values = range.getValues();
-    if (values.length === 0) {
-      return []; // No data in the range
-    }
-
-    const labels = [];
-    for (let i = 1; i < values.length; i++) { // Start from second row (skip header)
-      const row = values[i];
-      if (row[0] && row[1]) { // Both level and label should exist
-        labels.push({
-          level: row[0],
-          label: row[1]
-        });
-      }
-    }
-    return labels;
-  } catch (e) {
-    Logger.log("Error in getLevelLabels: " + e.message);
-    throw new Error("Failed to retrieve level labels: " + e.message);
+  // Create sheet if it doesn't exist (basic setup)
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(sheetName);
+    // You might want to define default headers here if creating new
   }
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const newRow = headers.map(header => {
+    // Basic mapping: match header name to record key (case insensitive logic could be added)
+    const key = header.trim().replace(/[^a-zA-Z0-9]+(.)?/g, (match, chr) => chr ? chr.toUpperCase() : '').replace(/^./, str => str.toLowerCase());
+    return record[key] || '';
+  });
+
+  sheet.appendRow(newRow);
+  return record;
 }
